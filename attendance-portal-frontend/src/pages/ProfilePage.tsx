@@ -2,17 +2,24 @@ import { useState, useEffect } from 'react'
 import { useFrappeGetDoc, useFrappePostCall } from 'frappe-react-sdk'
 import { useAuth } from '../contexts/AuthContext'
 import { format } from 'date-fns'
+import toast from 'react-hot-toast'
 
 export default function ProfilePage() {
     const { employeeId, employeeName, isManager, isHrAdmin, user, logout } = useAuth()
     const [leaveBalances, setLeaveBalances] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [showPasswordModal, setShowPasswordModal] = useState(false)
+    const [oldPassword, setOldPassword] = useState('')
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [changingPassword, setChangingPassword] = useState(false)
 
     const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', {
         enabled: !!employeeId
     })
 
     const { call: getBalances } = useFrappePostCall('attendance_portal.api.get_leave_balances')
+    const { call: updatePassword } = useFrappePostCall('frappe.core.doctype.user.user.update_password')
 
     useEffect(() => {
         const fetchLeaveData = async () => {
@@ -33,6 +40,44 @@ export default function ProfilePage() {
 
         fetchLeaveData()
     }, [employeeId, getBalances])
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            toast.error('Please fill in all fields')
+            return
+        }
+        
+        if (newPassword !== confirmPassword) {
+            toast.error('New password and confirm password do not match')
+            return
+        }
+        
+        if (newPassword.length < 8) {
+            toast.error('Password must be at least 8 characters long')
+            return
+        }
+        
+        setChangingPassword(true)
+        try {
+            await updatePassword({
+                old_password: oldPassword,
+                new_password: newPassword,
+                logout_all_sessions: 0
+            })
+            toast.success('Password changed successfully')
+            setShowPasswordModal(false)
+            setOldPassword('')
+            setNewPassword('')
+            setConfirmPassword('')
+        } catch (error: any) {
+            console.error('Failed to change password:', error)
+            toast.error(error?.message || error?.exception || 'Failed to change password')
+        } finally {
+            setChangingPassword(false)
+        }
+    }
 
     if (loading && employeeId) {
         return (
@@ -172,10 +217,19 @@ export default function ProfilePage() {
 
                 {/* Personal Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 md:p-6">
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
-                        <span className="material-symbols-rounded text-indigo-600 text-xl sm:text-2xl">person</span>
-                        <span>Personal Information</span>
-                    </h2>
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <span className="material-symbols-rounded text-indigo-600 text-xl sm:text-2xl">person</span>
+                            <span>Personal Information</span>
+                        </h2>
+                        <button
+                            onClick={() => setShowPasswordModal(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
+                        >
+                            <span className="material-symbols-rounded text-lg">lock</span>
+                            <span>Change Password</span>
+                        </button>
+                    </div>
                     <div className="space-y-3 sm:space-y-4">
                         <InfoCard 
                             title="Email" 
@@ -295,6 +349,101 @@ export default function ProfilePage() {
                     <span>Logout</span>
                 </button>
             </div>
+
+            {/* Change Password Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <span className="material-symbols-rounded text-blue-600">lock</span>
+                                <span>Change Password</span>
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setShowPasswordModal(false)
+                                    setOldPassword('')
+                                    setNewPassword('')
+                                    setConfirmPassword('')
+                                }}
+                                className="text-gray-400 hover:text-gray-600 transition"
+                            >
+                                <span className="material-symbols-rounded text-2xl">close</span>
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleChangePassword} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Current Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={oldPassword}
+                                    onChange={(e) => setOldPassword(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                    autoComplete="current-password"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                    minLength={8}
+                                    autoComplete="new-password"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Confirm New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                    minLength={8}
+                                    autoComplete="new-password"
+                                />
+                            </div>
+                            
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowPasswordModal(false)
+                                        setOldPassword('')
+                                        setNewPassword('')
+                                        setConfirmPassword('')
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                                    disabled={changingPassword}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={changingPassword}
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                >
+                                    {changingPassword ? 'Changing...' : 'Change Password'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

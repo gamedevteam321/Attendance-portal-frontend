@@ -67,6 +67,29 @@ export default function AttendanceLogsPage() {
         }
     )
 
+    // Fetch holidays for the current month
+    const { call: getHolidays } = useFrappePostCall('attendance_portal.api.get_holidays_for_month')
+    const [holidays, setHolidays] = useState<string[]>([])
+
+    // Fetch holidays when month changes
+    useEffect(() => {
+        const fetchHolidays = async () => {
+            try {
+                const res = await getHolidays({
+                    month: currentDate.getMonth() + 1,
+                    year: currentDate.getFullYear()
+                })
+                const holidayList = (res as any)?.message || res || []
+                //console.log('Holidays fetched:', holidayList)
+                setHolidays(Array.isArray(holidayList) ? holidayList : [])
+            } catch (error) {
+                console.error('Failed to fetch holidays:', error)
+                setHolidays([])
+            }
+        }
+        fetchHolidays()
+    }, [currentDate, getHolidays])
+
     // Extract the actual logs array from the response
     const attendanceLogs: AttendanceLog[] = Array.isArray(attendanceLogsData) 
         ? attendanceLogsData 
@@ -176,9 +199,9 @@ export default function AttendanceLogsPage() {
     // Helper function to find attendance log for a date
     const findLogForDate = (date: Date): AttendanceLog | undefined => {
         if (!Array.isArray(attendanceLogs) || attendanceLogs.length === 0) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('No logs available or not an array:', attendanceLogs)
-            }
+            // if (process.env.NODE_ENV === 'development') {
+            //     console.log('No logs available or not an array:', attendanceLogs)
+            // }
             return undefined
         }
         
@@ -239,12 +262,12 @@ export default function AttendanceLogsPage() {
         const log = findLogForDate(date)
         
         // Debug logging
-        if (process.env.NODE_ENV === 'development') {
-            console.log('Selected date:', format(date, 'yyyy-MM-dd'))
-            console.log('Available logs (extracted):', attendanceLogs)
-            console.log('Raw logs data:', attendanceLogsData)
-            console.log('Found log:', log)
-        }
+        // if (process.env.NODE_ENV === 'development') {
+        //     console.log('Selected date:', format(date, 'yyyy-MM-dd'))
+        //     console.log('Available logs (extracted):', attendanceLogs)
+        //     console.log('Raw logs data:', attendanceLogsData)
+        //     console.log('Found log:', log)
+        // }
         
         if (log) {
             setCheckIn(log.check_in ? format(parseISO(log.check_in), 'HH:mm') : '')
@@ -286,6 +309,12 @@ export default function AttendanceLogsPage() {
         }
     }
 
+    // Helper function to check if date is a holiday
+    const isHoliday = (date: Date): boolean => {
+        const dateStr = format(date, 'yyyy-MM-dd')
+        return holidays.includes(dateStr)
+    }
+
     // Determine status indicator based on attendance log
     const getStatusIndicator = (log: AttendanceLog | undefined, date: Date): StatusIndicator => {
         // If date is before joining date, return empty
@@ -293,7 +322,12 @@ export default function AttendanceLogsPage() {
             return { text: '', color: '', bgColor: '' }
         }
 
-        // Check if date is within approved remote work request (prioritize this)
+        // Check if date is a holiday (prioritize this)
+        if (isHoliday(date)) {
+            return { text: 'O', color: 'text-purple-600', bgColor: 'bg-purple-50' }
+        }
+
+        // Check if date is within approved remote work request
         if (isDateInApprovedRemoteWork(date)) {
             return { text: 'WR', color: 'text-indigo-600', bgColor: 'bg-indigo-50' }
         }
@@ -334,7 +368,7 @@ export default function AttendanceLogsPage() {
             case 'Pending Approval':
                 return { text: 'PA', color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
             case 'Holiday':
-                return { text: 'H', color: 'text-purple-600', bgColor: 'bg-purple-50' }
+                return { text: 'O', color: 'text-purple-600', bgColor: 'bg-purple-50' }
             case 'On Leave':
                 return { text: 'L', color: 'text-gray-600', bgColor: 'bg-gray-50' }
             case 'Work From Home':
@@ -369,9 +403,19 @@ export default function AttendanceLogsPage() {
     const canRegularizeDate = (date: Date | null, log: AttendanceLog | undefined): boolean => {
         if (!date) return false
         
+        // Check if date is a holiday (off day) - cannot regularize
+        if (isHoliday(date)) {
+            return false
+        }
+        
         // Get the status indicator for this date
         const statusIndicator = getStatusIndicator(log, date)
         const statusText = statusIndicator.text
+
+        // Check if status is "On Leave" (L) - cannot regularize
+        if (statusText === 'L' || log?.status === 'On Leave') {
+            return false
+        }
 
         // Can regularize if:
         // 1. No log exists (Absent)
@@ -383,7 +427,7 @@ export default function AttendanceLogsPage() {
         const regularizableStatuses = ['A', 'HD', 'P:A', 'A:P', 'WR']
         
         if (!log) {
-            // No log means Absent, can regularize
+            // No log means Absent, can regularize (but not if it's a holiday)
             return true
         }
 
@@ -694,8 +738,8 @@ export default function AttendanceLogsPage() {
                                     <span className="text-gray-700">Half Day</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-purple-600 font-bold bg-purple-50 px-1 rounded">H</span>
-                                    <span className="text-gray-700">Holiday</span>
+                                    <span className="text-purple-600 font-bold bg-purple-50 px-1 rounded">O</span>
+                                    <span className="text-gray-700">Off (Holiday)</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm">
                                     <span className="text-indigo-600 font-bold bg-indigo-50 px-1 rounded">WR</span>

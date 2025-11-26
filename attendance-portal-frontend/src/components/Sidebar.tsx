@@ -50,17 +50,18 @@ export default function Sidebar() {
                 lg:translate-x-0
                 ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
                 w-64
+                overflow-hidden
             `}>
                 {/* Logo/Brand */}
-                <div className={`p-4 lg:p-6 flex items-center gap-3 ${isCollapsed ? 'lg:justify-center' : ''}`}>
+                <div className={`p-4 lg:p-6 flex items-center gap-3 flex-shrink-0 ${isCollapsed ? 'lg:justify-center' : ''}`}>
                     <img src="/logo.svg" alt="Logo" className="w-8 h-8 lg:w-10 lg:h-10 flex-shrink-0" />
                     <span className={`text-lg lg:text-xl font-bold text-gray-800 whitespace-nowrap ${isCollapsed ? 'lg:hidden' : ''}`}>
                         Attendance Portal
                     </span>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 px-2 lg:px-4 py-4 space-y-1 overflow-y-auto">
+                {/* Navigation - Scrollable */}
+                <nav className="flex-1 min-h-0 px-2 lg:px-4 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
                     {navItems.map((item) => (
                         <Link
                             key={item.path}
@@ -84,8 +85,8 @@ export default function Sidebar() {
                     ))}
                 </nav>
 
-                {/* Profile Section */}
-                <div className="p-4 border-t border-gray-100">
+                {/* Profile Section - Fixed at bottom */}
+                <div className="p-4 border-t border-gray-100 flex-shrink-0 bg-white">
                     <div className={`flex items-center gap-3 px-2 ${isCollapsed ? 'lg:justify-center' : ''}`}>
                         <Link 
                             to="/profile" 
