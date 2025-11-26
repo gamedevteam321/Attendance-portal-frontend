@@ -20,6 +20,7 @@ export default function NotificationDropdown() {
     const navigate = useNavigate()
 
     const { call: fetchNotifications } = useFrappePostCall('attendance_portal.api.get_notifications')
+    const { call: markAsRead } = useFrappePostCall('attendance_portal.api.mark_notification_as_read')
 
     useEffect(() => {
         loadNotifications()
@@ -52,7 +53,22 @@ export default function NotificationDropdown() {
         }
     }
 
-    const handleNotificationClick = (notification: Notification) => {
+    const handleNotificationClick = async (notification: Notification) => {
+        // Mark as read if unread
+        if (notification.unread) {
+            try {
+                await markAsRead({ notification_id: notification.id })
+                // Update local state immediately for better UX
+                setNotifications(prev => 
+                    prev.map(n => 
+                        n.id === notification.id ? { ...n, unread: false } : n
+                    )
+                )
+            } catch (error) {
+                console.error('Failed to mark notification as read:', error)
+            }
+        }
+        
         navigate(notification.link)
         setIsOpen(false)
     }
