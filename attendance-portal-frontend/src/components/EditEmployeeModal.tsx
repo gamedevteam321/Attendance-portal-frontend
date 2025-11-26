@@ -18,7 +18,8 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
         designation: '',
         reports_to: '',
         status: '',
-        office: ''
+        office: '',
+        holiday_list: ''
     })
     const [loading, setLoading] = useState(false)
 
@@ -32,6 +33,7 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
     const { data: designations } = useFrappeGetDocList('Designation', { fields: ['name'], limit: 100 })
     const { data: employees } = useFrappeGetDocList('Employee', { fields: ['name', 'employee_name'], limit: 100 })
     const { data: offices } = useFrappeGetDocList('Office Location', { fields: ['name', 'office_name'] })
+    const { data: holidayLists } = useFrappeGetDocList('Holiday List', { fields: ['name', 'holiday_list_name'] })
 
     useEffect(() => {
         if (employee) {
@@ -43,7 +45,8 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
                 designation: employee.designation || '',
                 reports_to: employee.reports_to || '',
                 status: employee.status || 'Active',
-                office: employee.allowed_locations?.[0]?.office || ''
+                office: employee.allowed_locations?.[0]?.office || '',
+                holiday_list: employee.holiday_list || ''
             })
         }
     }, [employee])
@@ -180,6 +183,21 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
                                 <option value="Suspended">Suspended</option>
                                 <option value="Left">Left</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Holiday List</label>
+                            <select
+                                value={formData.holiday_list}
+                                onChange={e => setFormData({ ...formData, holiday_list: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="">Select Holiday List (Optional)</option>
+                                {holidayLists?.map(hl => (
+                                    <option key={hl.name} value={hl.name}>{hl.holiday_list_name || hl.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">Select a holiday list for this employee (e.g., 5 Day Week or 6 Day Week)</p>
                         </div>
                     </div>
 

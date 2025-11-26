@@ -21,6 +21,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         reports_to: '',
         company: '',
         office: '',
+        holiday_list: '',
         roles: ['Employee'] // Default role - Employee is always required
     })
     const [loading, setLoading] = useState(false)
@@ -32,6 +33,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
     const { data: employees } = useFrappeGetDocList('Employee', { fields: ['name', 'employee_name'], limit: 100 })
     const { data: companies } = useFrappeGetDocList('Company', { fields: ['name'] })
     const { data: offices } = useFrappeGetDocList('Office Location', { fields: ['name', 'office_name'] })
+    const { data: holidayLists } = useFrappeGetDocList('Holiday List', { fields: ['name', 'holiday_list_name'] })
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -55,6 +57,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                 reports_to: '',
                 company: '',
                 office: '',
+                holiday_list: '',
                 roles: ['Employee']
             })
         } catch (error: any) {
@@ -213,6 +216,21 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                     <option key={e.name} value={e.name}>{e.employee_name} ({e.name})</option>
                                 ))}
                             </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Holiday List</label>
+                            <select
+                                value={formData.holiday_list}
+                                onChange={e => setFormData({ ...formData, holiday_list: e.target.value })}
+                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="">Select Holiday List (Optional)</option>
+                                {holidayLists?.map(hl => (
+                                    <option key={hl.name} value={hl.name}>{hl.holiday_list_name || hl.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">Select a holiday list for this employee (e.g., 5 Day Week or 6 Day Week)</p>
                         </div>
 
                         <div className="md:col-span-2">
