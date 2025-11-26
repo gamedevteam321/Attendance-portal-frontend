@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import type { ComponentType } from 'react'
 import ProtectedRoute from './components/ProtectedRoute'
 import DashboardLayout from './layouts/DashboardLayout'
+import { SidebarProvider } from './contexts/SidebarContext'
 
 // Pages
 import LoginPage from './pages/LoginPage'
@@ -10,30 +10,12 @@ import HomePage from './pages/HomePage'
 import AttendanceLogsPage from './pages/AttendanceLogsPage'
 import RemoteWorkPage from './pages/RemoteWorkPage'
 import LeavePage from './pages/LeavePage'
-import RegularizationPage from './pages/RegularizationPage'
 import ProfilePage from './pages/ProfilePage'
 import OfficeLocationPage from './pages/OfficeLocationPage'
 import ApprovalsPage from './pages/ApprovalsPage'
 
 import EmployeeManagementPage from './pages/EmployeeManagementPage'
 import EmployeeDetailsPage from './pages/EmployeeDetailsPage'
-
-interface RouteConfig {
-  path: string
-  component: ComponentType
-  protected?: boolean
-}
-
-const routes: RouteConfig[] = [
-  { path: '/login', component: LoginPage, protected: false },
-  { path: '/', component: HomePage, protected: true },
-  { path: '/attendance/logs', component: AttendanceLogsPage, protected: true },
-  { path: '/remote', component: RemoteWorkPage, protected: true },
-  { path: '/leave', component: LeavePage, protected: true },
-  { path: '/regularization', component: RegularizationPage, protected: true },
-  { path: '/profile', component: ProfilePage, protected: true },
-  { path: '/approvals', component: ApprovalsPage, protected: true },
-]
 
 function App() {
   return (
@@ -45,7 +27,9 @@ function App() {
         {/* Protected Routes with Dashboard Layout */}
         <Route element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <SidebarProvider>
+              <DashboardLayout />
+            </SidebarProvider>
           </ProtectedRoute>
         }>
           <Route path="/" element={<HomePage />} />

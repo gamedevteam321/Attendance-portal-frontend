@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useFrappePostCall, useFrappeCreateDoc, useFrappeUpdateDoc, useFrappeDeleteDoc } from 'frappe-react-sdk'
+import { useFrappePostCall, useFrappeDeleteDoc } from 'frappe-react-sdk'
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -33,9 +33,7 @@ export default function OfficeLocationPage() {
     const { call: getLocations } = useFrappePostCall('attendance_portal.api.get_office_locations')
     const [locations, setLocations] = useState<OfficeLocation[]>([])
 
-    const { createDoc, loading: creating } = useFrappeCreateDoc()
-    const { updateDoc, loading: updating } = useFrappeUpdateDoc()
-    const { deleteDoc, loading: deleting } = useFrappeDeleteDoc()
+    const { deleteDoc } = useFrappeDeleteDoc()
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingLocation, setEditingLocation] = useState<OfficeLocation | null>(null)
@@ -205,61 +203,61 @@ export default function OfficeLocationPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Office Locations</h1>
-                    <p className="text-gray-500">Manage allowed geofencing zones for attendance.</p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Office Locations</h1>
+                    <p className="text-sm sm:text-base text-gray-500 mt-1">Manage allowed geofencing zones for attendance.</p>
                 </div>
                 <button
                     onClick={handleAddNew}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    className="bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base transition shadow-sm hover:shadow-md w-full sm:w-auto"
                 >
-                    <span className="material-symbols-rounded">add</span>
-                    Add Location
+                    <span className="material-symbols-rounded text-lg sm:text-xl">add</span>
+                    <span>Add Location</span>
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {locations?.map(location => (
                     <div key={location.name} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="h-32 bg-gray-100 relative">
+                        <div className="h-24 sm:h-32 bg-gray-100 relative">
                             {/* Mini Map Preview (Static or just a placeholder) */}
                             <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                                <span className="material-symbols-rounded text-4xl">map</span>
+                                <span className="material-symbols-rounded text-3xl sm:text-4xl">map</span>
                             </div>
                             {/* We could use a static map image here if we had an API key */}
                         </div>
-                        <div className="p-5">
-                            <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-bold text-gray-800 text-lg">{location.office_name}</h3>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${location.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        <div className="p-4 sm:p-5">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
+                                <h3 className="font-bold text-gray-800 text-base sm:text-lg break-words">{location.office_name}</h3>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap self-start sm:self-auto ${location.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                                     {location.is_active ? 'Active' : 'Inactive'}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500 mb-4 line-clamp-2">{location.address || 'No address provided'}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4 line-clamp-2">{location.address || 'No address provided'}</p>
 
-                            <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-gray-500 mb-3 sm:mb-4">
                                 <div className="flex items-center gap-1">
                                     <span className="material-symbols-rounded text-sm">radar</span>
                                     {location.radius_meters}m Radius
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <span className="material-symbols-rounded text-sm">location_on</span>
-                                    {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                                    <span className="break-all">{location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</span>
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 pt-4 border-t border-gray-50">
+                            <div className="flex gap-2 pt-3 sm:pt-4 border-t border-gray-50">
                                 <button
                                     onClick={() => handleEdit(location)}
-                                    className="flex-1 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                    className="flex-1 py-2 text-xs sm:text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition"
                                 >
                                     Edit
                                 </button>
                                 <button
                                     onClick={() => handleDelete(location.name)}
-                                    className="flex-1 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
+                                    className="flex-1 py-2 text-xs sm:text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
                                 >
                                     Delete
                                 </button>
@@ -271,56 +269,56 @@ export default function OfficeLocationPage() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                            <h2 className="text-xl font-bold text-gray-800">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-xl">
+                        <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-800">
                                 {editingLocation ? 'Edit Location' : 'Add New Location'}
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                <span className="material-symbols-rounded">close</span>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                                <span className="material-symbols-rounded text-xl sm:text-2xl">close</span>
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div className="space-y-4">
+                        <form onSubmit={handleSubmit} className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+                            <div className="space-y-3 sm:space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Office Name</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Office Name</label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.office_name}
                                         onChange={e => setFormData({ ...formData, office_name: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                                         placeholder="e.g. Headquarters"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Company</label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.company}
                                         onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                                         placeholder="Company Name"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Address</label>
                                     <textarea
                                         rows={3}
                                         value={formData.address}
                                         onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
                                         placeholder="Full address..."
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                                         Geofence Radius: <span className="text-blue-600 font-bold">{formData.radius_meters} meters</span>
                                     </label>
                                     <input
@@ -343,19 +341,19 @@ export default function OfficeLocationPage() {
                                         onChange={e => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })}
                                         className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                                     />
-                                    <label htmlFor="isActive" className="text-sm font-medium text-gray-700">Location is Active</label>
+                                    <label htmlFor="isActive" className="text-xs sm:text-sm font-medium text-gray-700">Location is Active</label>
                                 </div>
                             </div>
 
                             <div className="relative">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Search Location</label>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Search Location</label>
                                 <div className="relative">
                                     <input
                                         type="text"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition pr-10"
+                                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition pr-10"
                                         placeholder="Type to search (e.g. Connaught Place)..."
                                     />
                                     {isSearching && (
@@ -381,7 +379,7 @@ export default function OfficeLocationPage() {
                                 )}
                             </div>
 
-                            <div className="h-[400px] bg-gray-50 rounded-xl overflow-hidden border border-gray-200 relative">
+                            <div className="h-[300px] sm:h-[400px] bg-gray-50 rounded-xl overflow-hidden border border-gray-200 relative">
                                 <MapContainer
                                     center={[formData.latitude || 28.6139, formData.longitude || 77.2090]}
                                     zoom={15}
@@ -393,23 +391,23 @@ export default function OfficeLocationPage() {
                                     />
                                     <MapController />
                                 </MapContainer>
-                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-sm text-xs font-medium z-[1000]">
+                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white/90 backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-sm text-xs font-medium z-[1000]">
                                     Click map to set location
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-2 flex justify-end gap-3 pt-4 border-t border-gray-100">
+                            <div className="lg:col-span-2 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-100">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-6 py-2 text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition"
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 text-sm sm:text-base text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50"
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 text-sm sm:text-base bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50"
                                 >
                                     {saving ? 'Saving...' : 'Save Location'}
                                 </button>

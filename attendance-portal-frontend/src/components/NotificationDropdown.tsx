@@ -79,62 +79,81 @@ export default function NotificationDropdown() {
                 className="p-2 text-gray-400 hover:text-gray-600 transition relative"
             >
                 <span className="sr-only">Notifications</span>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs rounded-full flex items-center justify-center px-1 font-medium">
+                    <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 min-w-[16px] h-4 sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[10px] sm:text-xs rounded-full flex items-center justify-center px-0.5 sm:px-1 font-medium">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[500px] overflow-hidden flex flex-col">
-                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-800">Notifications</h3>
-                        {unreadCount > 0 && (
-                            <span className="text-xs text-gray-500">{unreadCount} unread</span>
-                        )}
-                    </div>
+                <>
+                    {/* Mobile Overlay */}
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    
+                    {/* Dropdown Panel */}
+                    <div className="
+                        fixed sm:absolute 
+                        right-0 sm:right-0 
+                        top-16 sm:top-auto sm:mt-2
+                        w-[calc(100vw-2rem)] sm:w-80 md:w-96 
+                        max-w-sm sm:max-w-none
+                        bg-white rounded-xl shadow-xl border border-gray-200 z-50 
+                        max-h-[calc(100vh-5rem)] sm:max-h-[500px] 
+                        overflow-hidden flex flex-col
+                        mx-4 sm:mx-0
+                    ">
+                        <div className="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between">
+                            <h3 className="font-semibold text-sm sm:text-base text-gray-800">Notifications</h3>
+                            {unreadCount > 0 && (
+                                <span className="text-xs text-gray-500">{unreadCount} unread</span>
+                            )}
+                        </div>
 
-                    <div className="overflow-y-auto flex-1">
-                        {notifications.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
-                                <span className="material-symbols-rounded text-4xl text-gray-300 mb-2 block">notifications_off</span>
-                                <p>No notifications</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-gray-100">
-                                {notifications.map((notification) => (
-                                    <button
-                                        key={notification.id}
-                                        onClick={() => handleNotificationClick(notification)}
-                                        className="w-full p-4 hover:bg-gray-50 transition text-left flex gap-3"
-                                    >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getNotificationColor(notification.type)}`}>
-                                            <span className="material-symbols-rounded text-lg">
-                                                {getNotificationIcon(notification.type)}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2 mb-1">
-                                                <p className="font-medium text-sm text-gray-800">{notification.title}</p>
-                                                {notification.unread && (
-                                                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
-                                                )}
+                        <div className="overflow-y-auto flex-1">
+                            {notifications.length === 0 ? (
+                                <div className="p-6 sm:p-8 text-center text-gray-500">
+                                    <span className="material-symbols-rounded text-3xl sm:text-4xl text-gray-300 mb-2 block">notifications_off</span>
+                                    <p className="text-sm sm:text-base">No notifications</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-gray-100">
+                                    {notifications.map((notification) => (
+                                        <button
+                                            key={notification.id}
+                                            onClick={() => handleNotificationClick(notification)}
+                                            className="w-full p-3 sm:p-4 hover:bg-gray-50 transition text-left flex gap-2 sm:gap-3"
+                                        >
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getNotificationColor(notification.type)}`}>
+                                                <span className="material-symbols-rounded text-base sm:text-lg">
+                                                    {getNotificationIcon(notification.type)}
+                                                </span>
                                             </div>
-                                            <p className="text-sm text-gray-600 line-clamp-2">{notification.message}</p>
-                                            <p className="text-xs text-gray-400 mt-1">
-                                                {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
-                                            </p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                    <p className="font-medium text-xs sm:text-sm text-gray-800 break-words">{notification.title}</p>
+                                                    {notification.unread && (
+                                                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 break-words">{notification.message}</p>
+                                                <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
+                                                    {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     )

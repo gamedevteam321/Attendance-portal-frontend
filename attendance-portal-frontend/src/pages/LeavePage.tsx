@@ -3,7 +3,6 @@ import { useFrappeGetDocList, useFrappePostCall } from 'frappe-react-sdk'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
-import { Link } from 'react-router-dom'
 
 interface LeaveBalance {
     leave_type: string
@@ -108,11 +107,11 @@ export default function LeavePage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Leave Balances */}
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Leave Balances</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Leave Balances</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4">
                     {balances.map((balance) => {
                         const isNegative = balance.remaining < 0
                         const isZero = balance.remaining === 0
@@ -123,16 +122,16 @@ export default function LeavePage() {
                         if (balance.leave_type === 'Compensatory Leave') borderColor = 'border-purple-500'
 
                         return (
-                            <div key={balance.leave_type} className={`bg-white rounded-2xl shadow-md p-6 border-l-4 ${borderColor}`}>
-                                <h3 className="text-gray-500 font-medium text-sm uppercase tracking-wider mb-2">{balance.leave_type}</h3>
+                            <div key={balance.leave_type} className={`bg-white rounded-2xl shadow-md p-4 sm:p-6 border-l-4 ${borderColor}`}>
+                                <h3 className="text-gray-500 font-medium text-xs sm:text-sm uppercase tracking-wider mb-2">{balance.leave_type}</h3>
                                 <div className="flex justify-between items-end mb-3">
                                     <div>
-                                        <span className={`text-3xl font-bold ${isNegative ? 'text-red-600' : 'text-gray-800'}`}>
+                                        <span className={`text-2xl sm:text-3xl font-bold ${isNegative ? 'text-red-600' : 'text-gray-800'}`}>
                                             {balance.remaining}
                                         </span>
-                                        <span className="text-gray-400 text-sm ml-1">left</span>
+                                        <span className="text-gray-400 text-xs sm:text-sm ml-1">left</span>
                                     </div>
-                                    <div className="text-right text-sm text-gray-500">
+                                    <div className="text-right text-xs sm:text-sm text-gray-500">
                                         <div>{balance.used} used</div>
                                         <div>{balance.allocated} total</div>
                                     </div>
@@ -150,23 +149,23 @@ export default function LeavePage() {
                         )
                     })}
                 </div>
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-                    <p className="text-sm text-blue-800">
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded-lg">
+                    <p className="text-xs sm:text-sm text-blue-800">
                         <strong>Note:</strong> You receive 1 Casual Leave and 1 Sick Leave every month.
                         Sick Leave can go negative, but Casual Leave cannot.
                     </p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 {/* Application Form */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white rounded-2xl shadow-lg p-8">
-                        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Apply for Leave</h2>
+                    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8">
+                        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-gray-800">Apply for Leave</h2>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                             <div>
-                                <label htmlFor="leaveType" className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="leaveType" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                                     Leave Type
                                 </label>
                                 <select
@@ -174,7 +173,7 @@ export default function LeavePage() {
                                     value={leaveType}
                                     onChange={(e) => setLeaveType(e.target.value)}
                                     required
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white"
+                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white"
                                 >
                                     <option value="">Select Leave Type</option>
                                     {leaveTypes?.map(lt => (
@@ -184,7 +183,7 @@ export default function LeavePage() {
                             </div>
 
                             <div>
-                                <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="fromDate" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                                     From Date
                                 </label>
                                 <input
@@ -193,12 +192,12 @@ export default function LeavePage() {
                                     value={fromDate}
                                     onChange={(e) => setFromDate(e.target.value)}
                                     required
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                                 />
                             </div>
 
                             <div>
-                                <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="toDate" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                                     To Date
                                 </label>
                                 <input
@@ -208,12 +207,12 @@ export default function LeavePage() {
                                     onChange={(e) => setToDate(e.target.value)}
                                     required
                                     min={fromDate}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                                 />
                             </div>
 
                             <div>
-                                <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="reason" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                                     Reason
                                 </label>
                                 <textarea
@@ -222,7 +221,7 @@ export default function LeavePage() {
                                     onChange={(e) => setReason(e.target.value)}
                                     required
                                     rows={4}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
                                     placeholder="Reason for leave..."
                                 />
                             </div>
@@ -230,7 +229,7 @@ export default function LeavePage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-xl"
+                                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-xl"
                             >
                                 {loading ? 'Submitting...' : 'Submit Application'}
                             </button>
@@ -240,26 +239,26 @@ export default function LeavePage() {
 
                 {/* History List */}
                 <div className="lg:col-span-2">
-                    <div className="bg-white rounded-2xl shadow-lg p-8">
-                        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Leave History</h2>
+                    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8">
+                        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-gray-800">Leave History</h2>
 
                         {applications && applications.length > 0 ? (
-                            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                            <div className="space-y-3 sm:space-y-4 max-h-[600px] overflow-y-auto">
                                 {applications.map((app) => (
-                                    <div key={app.name} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-gray-800">{app.leave_type}</span>
-                                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    <div key={app.name} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2 sm:gap-0 mb-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-sm sm:text-base font-semibold text-gray-800">{app.leave_type}</span>
+                                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                                                         {app.total_leave_days} day{app.total_leave_days !== 1 ? 's' : ''}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-gray-600 mt-1">
+                                                <p className="text-xs sm:text-sm text-gray-600 mt-1">
                                                     {format(new Date(app.from_date), 'MMM dd, yyyy')} - {format(new Date(app.to_date), 'MMM dd, yyyy')}
                                                 </p>
                                             </div>
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${app.status === 'Approved'
+                                            <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${app.status === 'Approved'
                                                 ? 'bg-green-100 text-green-700'
                                                 : app.status === 'Rejected'
                                                     ? 'bg-red-100 text-red-700'
@@ -268,14 +267,14 @@ export default function LeavePage() {
                                                 {app.status}
                                             </span>
                                         </div>
-                                        <p className="text-gray-600 text-sm mt-2">{app.description}</p>
+                                        <p className="text-xs sm:text-sm text-gray-600 mt-2 break-words">{app.description}</p>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <div className="text-6xl mb-4">📅</div>
-                                <p className="text-gray-600">No leave applications found</p>
+                            <div className="text-center py-8 sm:py-12">
+                                <div className="text-4xl sm:text-6xl mb-4">📅</div>
+                                <p className="text-sm sm:text-base text-gray-600">No leave applications found</p>
                             </div>
                         )}
                     </div>

@@ -34,7 +34,7 @@ export default function RegularizationPage() {
     const [reason, setReason] = useState('')
 
     // Fetch attendance logs
-    const { data: attendanceLogs, isLoading: logsLoading } = useFrappeGetCall<AttendanceLog[]>(
+    const { data: attendanceLogs } = useFrappeGetCall<AttendanceLog[]>(
         'attendance_portal.api.get_attendance_logs',
         {
             month: currentDate.getMonth() + 1,

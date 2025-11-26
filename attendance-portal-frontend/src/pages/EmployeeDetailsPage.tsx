@@ -11,7 +11,6 @@ export default function EmployeeDetailsPage() {
     const { isHrAdmin } = useAuth()
     const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
     const [stats, setStats] = useState<any>(null)
-    const [loading, setLoading] = useState(false)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [leaveBalances, setLeaveBalances] = useState<any[]>([])
 
@@ -21,7 +20,6 @@ export default function EmployeeDetailsPage() {
 
     const fetchStats = async () => {
         if (!id) return
-        setLoading(true)
 
         const now = new Date()
         let fromDate, toDate
@@ -54,8 +52,6 @@ export default function EmployeeDetailsPage() {
             setStats((res as any).message || res)
         } catch (error) {
             console.error(error)
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -223,9 +219,13 @@ export default function EmployeeDetailsPage() {
                                         {log.working_hours ? log.working_hours.toFixed(2) : '-'}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${log.status === 'Present' ? 'bg-green-100 text-green-700' :
-                                            log.status === 'Absent' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
-                                            }`}>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            log.status === 'Present' ? 'bg-green-100 text-green-700' :
+                                            log.status === 'Absent' ? 'bg-red-100 text-red-700' :
+                                            log.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
+                                            log.status === 'Half Day' ? 'bg-orange-100 text-orange-700' :
+                                            'bg-gray-100 text-gray-600'
+                                        }`}>
                                             {log.status}
                                         </span>
                                     </td>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useFrappeGetCall, useFrappePostCall } from 'frappe-react-sdk'
 import { useAuth } from '../contexts/AuthContext'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay, addMonths, subMonths, parseISO, isBefore, isAfter, isWithinInterval, startOfDay } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, XCircle } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay, addMonths, subMonths, parseISO, isBefore, isWithinInterval, startOfDay } from 'date-fns'
+import { Clock } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 interface AttendanceLog {
@@ -59,7 +59,7 @@ export default function AttendanceLogsPage() {
     const [reason, setReason] = useState('')
 
     // Fetch attendance logs by month
-    const { data: attendanceLogsData, isLoading: logsLoading, mutate: refreshLogs } = useFrappeGetCall<AttendanceLog[] | { message: AttendanceLog[] }>(
+    const { data: attendanceLogsData, mutate: refreshLogs } = useFrappeGetCall<AttendanceLog[] | { message: AttendanceLog[] }>(
         'attendance_portal.api.get_attendance_logs',
         {
             month: currentDate.getMonth() + 1,
@@ -109,7 +109,7 @@ export default function AttendanceLogsPage() {
     }, [attendanceLogs, joiningDate])
 
     // Fetch regularization requests
-    const { data: requests, isLoading: requestsLoading, mutate: refreshRequests } = useFrappeGetCall<RegularizationRequest[]>(
+    const { data: requests, mutate: refreshRequests } = useFrappeGetCall<RegularizationRequest[]>(
         'attendance_portal.api.get_regularization_requests',
         {}
     )
@@ -185,10 +185,10 @@ export default function AttendanceLogsPage() {
         const normalizedDate = normalizeDate(date)
         const dateStr = format(normalizedDate, 'yyyy-MM-dd')
         
-        if (process.env.NODE_ENV === 'development') {
-            console.log('Searching for date:', dateStr)
-            console.log('Available log dates:', attendanceLogs.map(l => l.attendance_date))
-        }
+        // if (process.env.NODE_ENV === 'development') {
+        //     console.log('Searching for date:', dateStr)
+        //     console.log('Available log dates:', attendanceLogs.map(l => l.attendance_date))
+        // }
         
         // Try multiple matching strategies
         const log = attendanceLogs.find(l => {
@@ -331,6 +331,8 @@ export default function AttendanceLogsPage() {
                 return { text: 'A', color: 'text-red-600', bgColor: 'bg-red-50' }
             case 'Half Day':
                 return { text: 'HD', color: 'text-yellow-600', bgColor: 'bg-yellow-50' }
+            case 'Pending Approval':
+                return { text: 'PA', color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
             case 'Holiday':
                 return { text: 'H', color: 'text-purple-600', bgColor: 'bg-purple-50' }
             case 'On Leave':
