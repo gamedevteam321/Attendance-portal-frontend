@@ -38,6 +38,20 @@ interface RegularizationRequest {
     creation: string
 }
 
+interface PunchOutRequest {
+    name: string
+    employee: string
+    employee_name: string
+    attendance_date: string
+    attendance_log: string
+    check_out_time: string
+    reason: string
+    latitude?: number
+    longitude?: number
+    status: string
+    creation: string
+}
+
 interface HistoryLeaveApplication extends LeaveApplication {
     approved_by?: string
     approved_by_id?: string
@@ -56,15 +70,23 @@ interface HistoryRegularizationRequest extends RegularizationRequest {
     approved_at?: string
 }
 
+interface HistoryPunchOutRequest extends PunchOutRequest {
+    approved_by?: string
+    approved_by_id?: string
+    approved_at?: string
+}
+
 export default function ApprovalsPage() {
     const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending')
-    const [activeTab, setActiveTab] = useState<'leave' | 'remote' | 'regularization'>('leave')
+    const [activeTab, setActiveTab] = useState<'leave' | 'remote' | 'regularization' | 'punchout'>('leave')
     const [leaves, setLeaves] = useState<LeaveApplication[]>([])
     const [remoteRequests, setRemoteRequests] = useState<RemoteRequest[]>([])
     const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([])
+    const [punchOutRequests, setPunchOutRequests] = useState<PunchOutRequest[]>([])
     const [historyLeaves, setHistoryLeaves] = useState<HistoryLeaveApplication[]>([])
     const [historyRemoteRequests, setHistoryRemoteRequests] = useState<HistoryRemoteRequest[]>([])
     const [historyRegularizationRequests, setHistoryRegularizationRequests] = useState<HistoryRegularizationRequest[]>([])
+    const [historyPunchOutRequests, setHistoryPunchOutRequests] = useState<HistoryPunchOutRequest[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [processingId, setProcessingId] = useState<string | null>(null)
 
@@ -81,12 +103,14 @@ export default function ApprovalsPage() {
                 setLeaves(data.leave_applications || [])
                 setRemoteRequests(data.remote_requests || [])
                 setRegularizationRequests(data.regularization_requests || [])
+                setPunchOutRequests(data.punch_out_requests || [])
             } else {
                 const res = await getHistory({})
                 const data = (res as any).message || res
                 setHistoryLeaves(data.leave_applications || [])
                 setHistoryRemoteRequests(data.remote_requests || [])
                 setHistoryRegularizationRequests(data.regularization_requests || [])
+                setHistoryPunchOutRequests(data.punch_out_requests || [])
             }
         } catch (error) {
             console.error("Failed to fetch requests", error)
@@ -128,6 +152,7 @@ export default function ApprovalsPage() {
     const currentLeaves = viewMode === 'pending' ? leaves : historyLeaves
     const currentRemoteRequests = viewMode === 'pending' ? remoteRequests : historyRemoteRequests
     const currentRegularizationRequests = viewMode === 'pending' ? regularizationRequests : historyRegularizationRequests
+    const currentPunchOutRequests = viewMode === 'pending' ? punchOutRequests : historyPunchOutRequests
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -199,6 +224,20 @@ export default function ApprovalsPage() {
                     {currentRegularizationRequests.length > 0 && (
                         <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
                             {currentRegularizationRequests.length}
+                        </span>
+                    )}
+                </button>
+                <button
+                    onClick={() => setActiveTab('punchout')}
+                    className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'punchout'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                        }`}
+                >
+                    Punch Out Requests
+                    {currentPunchOutRequests.length > 0 && (
+                        <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                            {currentPunchOutRequests.length}
                         </span>
                     )}
                 </button>
@@ -364,7 +403,7 @@ export default function ApprovalsPage() {
                                 )
                             })
                         ) : <EmptyState message={viewMode === 'pending' ? "No pending remote work requests" : "No remote work request history"} />
-                    ) : (
+                    ) : activeTab === 'regularization' ? (
                         currentRegularizationRequests.length > 0 ? (
                             currentRegularizationRequests.map(req => {
                                 const historyReq = req as HistoryRegularizationRequest
@@ -440,6 +479,96 @@ export default function ApprovalsPage() {
                                 )
                             })
                         ) : <EmptyState message={viewMode === 'pending' ? "No pending regularization requests" : "No regularization request history"} />
+                    ) : (
+                        currentPunchOutRequests.length > 0 ? (
+                            currentPunchOutRequests.map(req => {
+                                const historyReq = req as HistoryPunchOutRequest
+                                return (
+                                <div key={req.name} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">
+                                                {req.employee_name[0]}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-gray-800">{req.employee_name}</h3>
+                                                <p className="text-sm text-gray-500">{req.employee}</p>
+                                            </div>
+                                            <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                                Punch Out
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-4 space-y-1">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <span className="material-symbols-rounded text-lg">calendar_month</span>
+                                                <span className="font-medium">
+                                                    {format(new Date(req.attendance_date), 'MMM dd, yyyy')}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <span className="material-symbols-rounded text-lg">schedule</span>
+                                                <span className="font-medium">
+                                                    {format(new Date(req.check_out_time), 'hh:mm a')}
+                                                </span>
+                                            </div>
+                                            {req.latitude && req.longitude && (
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <span className="material-symbols-rounded text-lg">location_on</span>
+                                                    <span className="text-xs">
+                                                        {req.latitude.toFixed(6)}, {req.longitude.toFixed(6)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {req.reason && (
+                                                <p className="text-gray-500 text-sm ml-7 mt-2">"{req.reason}"</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {viewMode === 'pending' ? (
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => handleAction('Punch Out Request', req.name, 'Rejected')}
+                                                disabled={processingId === req.name}
+                                                className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
+                                            >
+                                                Reject
+                                            </button>
+                                            <button
+                                                onClick={() => handleAction('Punch Out Request', req.name, 'Approved')}
+                                                disabled={processingId === req.name}
+                                                className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 transition"
+                                            >
+                                                {processingId === req.name ? 'Processing...' : 'Approve'}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                                historyReq.status === 'Approved' 
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {historyReq.status}
+                                            </span>
+                                            {historyReq.approved_by && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-gray-500">Approved by</p>
+                                                    <p className="text-sm font-medium text-gray-700">{historyReq.approved_by}</p>
+                                                    {historyReq.approved_at && (
+                                                        <p className="text-xs text-gray-400">
+                                                            {format(new Date(historyReq.approved_at), 'MMM dd, yyyy HH:mm')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                )
+                            })
+                        ) : <EmptyState message={viewMode === 'pending' ? "No pending punch out requests" : "No punch out request history"} />
                     )}
                 </div>
             )}

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import PunchOutReasonModal from '../components/PunchOutReasonModal'
 
 interface AttendanceLog {
     name: string
@@ -53,6 +54,7 @@ export default function HomePage() {
 
 function DashboardWidgets({ employeeId }: { employeeId: string }) {
     const { call: markPunch } = useFrappePostCall('attendance_portal.api.mark_punch')
+    const { call: requestPunchOutOutside } = useFrappePostCall('attendance_portal.api.request_punch_out_outside_office')
     const { getCurrentPosition, loading: geoLoading } = useGeolocation()
 
     // Get today's attendance log
@@ -64,6 +66,8 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
     const [locationStatus, setLocationStatus] = useState<'In Office' | 'Working Remote' | 'Working Remote (Pending)' | 'Out of Office' | 'Checking...'>('Checking...')
     const [canPunch, setCanPunch] = useState(false)
     const [currentDate, setCurrentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+    const [showPunchOutModal, setShowPunchOutModal] = useState(false)
+    const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null)
 
     const fetchLogs = async () => {
         try {
@@ -184,6 +188,29 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
         try {
             const { lat, lng } = await getCurrentPosition()
 
+            // For OUT action, check if user is outside office
+            if (action === 'OUT') {
+                const today = format(new Date(), 'yyyy-MM-dd')
+                
+                // Check if user has remote work
+                const remoteRes = await checkRemote({ employee: employeeId, date: today })
+                const remoteData = (remoteRes as any).message || remoteRes
+                
+                if (!remoteData.has_remote) {
+                    // Check if user is inside office
+                    const officeRes = await checkOffice({ employee: employeeId, lat, lng })
+                    const officeData = (officeRes as any).message || officeRes
+                    
+                    if (!officeData.inside) {
+                        // User is outside office - show modal
+                        setCurrentLocation({ lat, lng })
+                        setShowPunchOutModal(true)
+                        return
+                    }
+                }
+            }
+
+            // Normal punch flow (IN or OUT from office/with remote work)
             await markPunch({
                 employee: employeeId,
                 lat,
@@ -220,6 +247,46 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
         }
     }
 
+    const handlePunchOutSubmit = async (reason: string, lat: number, lng: number) => {
+        try {
+            await requestPunchOutOutside({
+                employee: employeeId,
+                lat,
+                lng,
+                reason
+            })
+
+            toast.success('Punch out request submitted successfully. Waiting for manager approval.')
+            setShowPunchOutModal(false)
+            setCurrentLocation(null)
+            
+            // Refresh logs
+            await new Promise(resolve => setTimeout(resolve, 100))
+            await mutate()
+            await checkLocationStatus()
+        } catch (error: any) {
+            console.error("Punch out request failed:", error)
+
+            let errorMessage = 'Failed to submit punch out request'
+            if (error.messages && Array.isArray(error.messages)) {
+                errorMessage = error.messages[0]
+            } else if (error.message) {
+                errorMessage = error.message
+            } else if (error._server_messages) {
+                try {
+                    const messages = JSON.parse(error._server_messages)
+                    errorMessage = JSON.parse(messages[0]).message
+                } catch (e) {
+                    errorMessage = 'Server error occurred'
+                }
+            } else if (error.exception) {
+                errorMessage = error.exception.split(':').pop()?.trim() || 'An error occurred'
+            }
+
+            toast.error(errorMessage)
+        }
+    }
+
     const StatCard = ({ title, value, icon, color }: { title: string, value: string, icon: string, color: string }) => (
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4">
             <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
@@ -234,6 +301,16 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
 
     return (
         <>
+            <PunchOutReasonModal
+                isOpen={showPunchOutModal}
+                onClose={() => {
+                    setShowPunchOutModal(false)
+                    setCurrentLocation(null)
+                }}
+                onSubmit={handlePunchOutSubmit}
+                location={currentLocation}
+                isSubmitting={false}
+            />
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <StatCard
