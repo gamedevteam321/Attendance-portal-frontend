@@ -75,15 +75,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             formData.append('usr', username);
             formData.append('pwd', password);
 
-            const response = await fetch('https://admin.orgatek.net/api/method/attendance_portal.api.get_api_keys', {
-                method: 'POST',
-                body: formData
-            });
-
-            // const response = await fetch('http://localhost:8000/api/method/attendance_portal.api.get_api_keys', {
+            // const response = await fetch('https://admin.orgatek.net/api/method/attendance_portal.api.get_api_keys', {
             //     method: 'POST',
             //     body: formData
             // });
+
+            const response = await fetch('http://localhost:8000/api/method/attendance_portal.api.get_api_keys', {
+                method: 'POST',
+                body: formData
+            });
 
             const data = await response.json();
 

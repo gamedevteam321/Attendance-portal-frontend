@@ -38,28 +38,59 @@ interface RegularizationRequest {
     creation: string
 }
 
+interface HistoryLeaveApplication extends LeaveApplication {
+    approved_by?: string
+    approved_by_id?: string
+    approved_at?: string
+}
+
+interface HistoryRemoteRequest extends RemoteRequest {
+    approved_by?: string
+    approved_by_id?: string
+    approved_at?: string
+}
+
+interface HistoryRegularizationRequest extends RegularizationRequest {
+    approved_by?: string
+    approved_by_id?: string
+    approved_at?: string
+}
+
 export default function ApprovalsPage() {
+    const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending')
     const [activeTab, setActiveTab] = useState<'leave' | 'remote' | 'regularization'>('leave')
     const [leaves, setLeaves] = useState<LeaveApplication[]>([])
     const [remoteRequests, setRemoteRequests] = useState<RemoteRequest[]>([])
     const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([])
+    const [historyLeaves, setHistoryLeaves] = useState<HistoryLeaveApplication[]>([])
+    const [historyRemoteRequests, setHistoryRemoteRequests] = useState<HistoryRemoteRequest[]>([])
+    const [historyRegularizationRequests, setHistoryRegularizationRequests] = useState<HistoryRegularizationRequest[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [processingId, setProcessingId] = useState<string | null>(null)
 
     const { call: getPending } = useFrappePostCall('attendance_portal.api.get_pending_requests')
+    const { call: getHistory } = useFrappePostCall('attendance_portal.api.get_approval_history')
     const { call: processRequest } = useFrappePostCall('attendance_portal.api.approve_request')
 
     const fetchRequests = async () => {
         setIsLoading(true)
         try {
-            const res = await getPending({})
-            const data = (res as any).message || res
-            setLeaves(data.leave_applications || [])
-            setRemoteRequests(data.remote_requests || [])
-            setRegularizationRequests(data.regularization_requests || [])
+            if (viewMode === 'pending') {
+                const res = await getPending({})
+                const data = (res as any).message || res
+                setLeaves(data.leave_applications || [])
+                setRemoteRequests(data.remote_requests || [])
+                setRegularizationRequests(data.regularization_requests || [])
+            } else {
+                const res = await getHistory({})
+                const data = (res as any).message || res
+                setHistoryLeaves(data.leave_applications || [])
+                setHistoryRemoteRequests(data.remote_requests || [])
+                setHistoryRegularizationRequests(data.regularization_requests || [])
+            }
         } catch (error) {
             console.error("Failed to fetch requests", error)
-            toast.error("Failed to load pending requests")
+            toast.error(`Failed to load ${viewMode} requests`)
         } finally {
             setIsLoading(false)
         }
@@ -67,7 +98,7 @@ export default function ApprovalsPage() {
 
     useEffect(() => {
         fetchRequests()
-    }, [])
+    }, [viewMode])
 
     const handleAction = async (doctype: string, name: string, status: 'Approved' | 'Rejected') => {
         setProcessingId(name)
@@ -94,8 +125,39 @@ export default function ApprovalsPage() {
         </div>
     )
 
+    const currentLeaves = viewMode === 'pending' ? leaves : historyLeaves
+    const currentRemoteRequests = viewMode === 'pending' ? remoteRequests : historyRemoteRequests
+    const currentRegularizationRequests = viewMode === 'pending' ? regularizationRequests : historyRegularizationRequests
+
     return (
         <div className="max-w-7xl mx-auto">
+            {/* View Mode Toggle */}
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Approvals</h1>
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                    <button
+                        onClick={() => setViewMode('pending')}
+                        className={`px-4 py-2 rounded-md font-medium transition ${
+                            viewMode === 'pending'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                        Pending
+                    </button>
+                    <button
+                        onClick={() => setViewMode('history')}
+                        className={`px-4 py-2 rounded-md font-medium transition ${
+                            viewMode === 'history'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                        History
+                    </button>
+                </div>
+            </div>
+
             {/* Tabs */}
             <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
                 <button
@@ -106,9 +168,9 @@ export default function ApprovalsPage() {
                         }`}
                 >
                     Leave Applications
-                    {leaves.length > 0 && (
+                    {currentLeaves.length > 0 && (
                         <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {leaves.length}
+                            {currentLeaves.length}
                         </span>
                     )}
                 </button>
@@ -120,9 +182,9 @@ export default function ApprovalsPage() {
                         }`}
                 >
                     Remote Work
-                    {remoteRequests.length > 0 && (
+                    {currentRemoteRequests.length > 0 && (
                         <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {remoteRequests.length}
+                            {currentRemoteRequests.length}
                         </span>
                     )}
                 </button>
@@ -134,9 +196,9 @@ export default function ApprovalsPage() {
                         }`}
                 >
                     Regularization
-                    {regularizationRequests.length > 0 && (
+                    {currentRegularizationRequests.length > 0 && (
                         <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {regularizationRequests.length}
+                            {currentRegularizationRequests.length}
                         </span>
                     )}
                 </button>
@@ -150,8 +212,10 @@ export default function ApprovalsPage() {
             ) : (
                 <div className="space-y-4">
                     {activeTab === 'leave' ? (
-                        leaves.length > 0 ? (
-                            leaves.map(leave => (
+                        currentLeaves.length > 0 ? (
+                            currentLeaves.map(leave => {
+                                const historyLeave = leave as HistoryLeaveApplication
+                                return (
                                 <div key={leave.name} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
@@ -181,28 +245,54 @@ export default function ApprovalsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => handleAction('Leave Application', leave.name, 'Rejected')}
-                                            disabled={processingId === leave.name}
-                                            className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleAction('Leave Application', leave.name, 'Approved')}
-                                            disabled={processingId === leave.name}
-                                            className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shadow-lg shadow-green-200 transition"
-                                        >
-                                            {processingId === leave.name ? 'Processing...' : 'Approve'}
-                                        </button>
-                                    </div>
+                                    {viewMode === 'pending' ? (
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => handleAction('Leave Application', leave.name, 'Rejected')}
+                                                disabled={processingId === leave.name}
+                                                className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
+                                            >
+                                                Reject
+                                            </button>
+                                            <button
+                                                onClick={() => handleAction('Leave Application', leave.name, 'Approved')}
+                                                disabled={processingId === leave.name}
+                                                className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shadow-lg shadow-green-200 transition"
+                                            >
+                                                {processingId === leave.name ? 'Processing...' : 'Approve'}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                                historyLeave.status === 'Approved' 
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {historyLeave.status}
+                                            </span>
+                                            {historyLeave.approved_by && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-gray-500">Approved by</p>
+                                                    <p className="text-sm font-medium text-gray-700">{historyLeave.approved_by}</p>
+                                                    {historyLeave.approved_at && (
+                                                        <p className="text-xs text-gray-400">
+                                                            {format(new Date(historyLeave.approved_at), 'MMM dd, yyyy HH:mm')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            ))
-                        ) : <EmptyState message="No pending leave applications" />
+                                )
+                            })
+                        ) : <EmptyState message={viewMode === 'pending' ? "No pending leave applications" : "No leave application history"} />
                     ) : activeTab === 'remote' ? (
-                        remoteRequests.length > 0 ? (
-                            remoteRequests.map(req => (
+                        currentRemoteRequests.length > 0 ? (
+                            currentRemoteRequests.map(req => {
+                                const historyReq = req as HistoryRemoteRequest
+                                return (
                                 <div key={req.name} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
@@ -231,28 +321,54 @@ export default function ApprovalsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => handleAction('Remote Working Request', req.name, 'Rejected')}
-                                            disabled={processingId === req.name}
-                                            className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleAction('Remote Working Request', req.name, 'Approved')}
-                                            disabled={processingId === req.name}
-                                            className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shadow-lg shadow-green-200 transition"
-                                        >
-                                            {processingId === req.name ? 'Processing...' : 'Approve'}
-                                        </button>
-                                    </div>
+                                    {viewMode === 'pending' ? (
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => handleAction('Remote Working Request', req.name, 'Rejected')}
+                                                disabled={processingId === req.name}
+                                                className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
+                                            >
+                                                Reject
+                                            </button>
+                                            <button
+                                                onClick={() => handleAction('Remote Working Request', req.name, 'Approved')}
+                                                disabled={processingId === req.name}
+                                                className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shadow-lg shadow-green-200 transition"
+                                            >
+                                                {processingId === req.name ? 'Processing...' : 'Approve'}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                                historyReq.status === 'Approved' 
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {historyReq.status}
+                                            </span>
+                                            {historyReq.approved_by && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-gray-500">Approved by</p>
+                                                    <p className="text-sm font-medium text-gray-700">{historyReq.approved_by}</p>
+                                                    {historyReq.approved_at && (
+                                                        <p className="text-xs text-gray-400">
+                                                            {format(new Date(historyReq.approved_at), 'MMM dd, yyyy HH:mm')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            ))
-                        ) : <EmptyState message="No pending remote work requests" />
+                                )
+                            })
+                        ) : <EmptyState message={viewMode === 'pending' ? "No pending remote work requests" : "No remote work request history"} />
                     ) : (
-                        regularizationRequests.length > 0 ? (
-                            regularizationRequests.map(req => (
+                        currentRegularizationRequests.length > 0 ? (
+                            currentRegularizationRequests.map(req => {
+                                const historyReq = req as HistoryRegularizationRequest
+                                return (
                                 <div key={req.name} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
@@ -281,25 +397,49 @@ export default function ApprovalsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => handleAction('Attendance Regularization Request', req.name, 'Rejected')}
-                                            disabled={processingId === req.name}
-                                            className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleAction('Attendance Regularization Request', req.name, 'Approved')}
-                                            disabled={processingId === req.name}
-                                            className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shadow-lg shadow-green-200 transition"
-                                        >
-                                            {processingId === req.name ? 'Processing...' : 'Approve'}
-                                        </button>
-                                    </div>
+                                    {viewMode === 'pending' ? (
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => handleAction('Attendance Regularization Request', req.name, 'Rejected')}
+                                                disabled={processingId === req.name}
+                                                className="px-6 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 transition"
+                                            >
+                                                Reject
+                                            </button>
+                                            <button
+                                                onClick={() => handleAction('Attendance Regularization Request', req.name, 'Approved')}
+                                                disabled={processingId === req.name}
+                                                className="px-6 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shadow-lg shadow-green-200 transition"
+                                            >
+                                                {processingId === req.name ? 'Processing...' : 'Approve'}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                                historyReq.status === 'Approved' 
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {historyReq.status}
+                                            </span>
+                                            {historyReq.approved_by && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-gray-500">Approved by</p>
+                                                    <p className="text-sm font-medium text-gray-700">{historyReq.approved_by}</p>
+                                                    {historyReq.approved_at && (
+                                                        <p className="text-xs text-gray-400">
+                                                            {format(new Date(historyReq.approved_at), 'MMM dd, yyyy HH:mm')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            ))
-                        ) : <EmptyState message="No pending regularization requests" />
+                                )
+                            })
+                        ) : <EmptyState message={viewMode === 'pending' ? "No pending regularization requests" : "No regularization request history"} />
                     )}
                 </div>
             )}

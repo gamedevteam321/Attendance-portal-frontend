@@ -47,11 +47,31 @@ interface StatusIndicator {
     bgColor: string
 }
 
+interface AllEmployeesLog {
+    employee: string
+    employee_name: string
+    employee_id: string
+    attendance_date: string
+    check_in: string | null
+    check_out: string | null
+    status: string
+    working_hours: number
+    location_type?: string
+    punch_history?: {
+        punch_type: string
+        punch_time: string
+        location_type: string
+        office_location?: string
+    }[]
+}
+
 export default function AttendanceLogsPage() {
-    const { employeeId } = useAuth()
+    const { employeeId, isHrAdmin, isManager } = useAuth()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState<Date | null>(null)
     const [joiningDate, setJoiningDate] = useState<Date | null>(null)
+    const [allEmployeesLogs, setAllEmployeesLogs] = useState<AllEmployeesLog[]>([])
+    const [loadingAllLogs, setLoadingAllLogs] = useState(false)
 
     // Form State
     const [checkIn, setCheckIn] = useState('')
@@ -222,9 +242,9 @@ export default function AttendanceLogsPage() {
             
             // Try direct string comparison first
             if (logDateStr === dateStr) {
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('Found match via string comparison:', l)
-                }
+                // if (process.env.NODE_ENV === 'development') {
+                //     console.log('Found match via string comparison:', l)
+                // }
                 return true
             }
             
@@ -256,6 +276,31 @@ export default function AttendanceLogsPage() {
                    isSameDay(normalizedDate, toDate)
         })
     }
+
+    // Fetch all employees' logs for selected date (HR Admin/Manager only)
+    const { call: getAllEmployeesLogs } = useFrappePostCall<AllEmployeesLog[]>('attendance_portal.api.get_all_employees_attendance_for_date')
+
+    useEffect(() => {
+        const fetchAllEmployeesLogs = async () => {
+            if (selectedDate && (isHrAdmin || isManager)) {
+                setLoadingAllLogs(true)
+                try {
+                    const dateStr = format(selectedDate, 'yyyy-MM-dd')
+                    const res = await getAllEmployeesLogs({ date: dateStr })
+                    const data = (res as any)?.message || res || []
+                    setAllEmployeesLogs(Array.isArray(data) ? data : [])
+                } catch (error) {
+                    console.error('Failed to fetch all employees logs:', error)
+                    setAllEmployeesLogs([])
+                } finally {
+                    setLoadingAllLogs(false)
+                }
+            } else {
+                setAllEmployeesLogs([])
+            }
+        }
+        fetchAllEmployeesLogs()
+    }, [selectedDate, isHrAdmin, isManager, getAllEmployeesLogs])
 
     const handleDateClick = (date: Date) => {
         setSelectedDate(date)
@@ -472,9 +517,11 @@ export default function AttendanceLogsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Calendar Section - Left Side */}
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="space-y-6">
+                {/* Calendar and Details Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Calendar Section - Left Side */}
+                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-lg font-semibold text-gray-800">
                             {format(currentDate, 'MMMM yyyy')}
@@ -580,63 +627,77 @@ export default function AttendanceLogsPage() {
                                 </div>
                             </div>
 
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                                <span className="text-sm text-gray-600">Check In</span>
-                                                <span className="text-sm font-medium text-gray-900">
-                                                    {selectedLog.check_in ? format(parseISO(selectedLog.check_in), 'hh:mm a') : '-'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                                <span className="text-sm text-gray-600">Check Out</span>
-                                                <span className="text-sm font-medium text-gray-900">
-                                                    {selectedLog.check_out ? format(parseISO(selectedLog.check_out), 'hh:mm a') : '-'}
-                                                </span>
-                                            </div>
-                                            {selectedLog.location_type && (
-                                                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                                    <span className="text-sm text-gray-600">Location</span>
-                                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                                        selectedLog.location_type === 'Office' 
-                                                            ? 'bg-blue-100 text-blue-700' 
-                                                            : 'bg-purple-100 text-purple-700'
-                                                    }`}>
-                                                        {selectedLog.location_type}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {selectedLog.punch_history && selectedLog.punch_history.length > 0 && (
-                                            <div>
-                                                <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2 text-sm">
-                                                    <Clock className="w-4 h-4" />
-                                Punch History
-                            </h4>
-                                                <div className="space-y-2 max-h-40 overflow-y-auto">
+                                        {/* Punch In/Out Logs Section */}
+                                        <div>
+                                            <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2 text-sm">
+                                                <Clock className="w-4 h-4" />
+                                                Punch In/Out Logs
+                                            </h4>
+                                            
+                                            {selectedLog.punch_history && selectedLog.punch_history.length > 0 ? (
+                                                <div className="space-y-2">
                                                     {selectedLog.punch_history.map((punch, index) => (
-                                                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                                                                    punch.punch_type === 'IN' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                                                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                                    punch.punch_type === 'IN' 
+                                                                        ? 'bg-green-100 text-green-700 border-2 border-green-300' 
+                                                                        : 'bg-red-100 text-red-700 border-2 border-red-300'
                                                                 }`}>
                                                                     {punch.punch_type === 'IN' ? 'IN' : 'OUT'}
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-xs font-medium text-gray-900">{punch.location_type}</p>
-                                                                    {punch.office_location && (
-                                                                        <p className="text-xs text-gray-500">{punch.office_location}</p>
-                                                                    )}
+                                                                    <p className="text-sm font-semibold text-gray-900">
+                                                                        {format(parseISO(punch.punch_time), 'hh:mm a')}
+                                                                    </p>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                                                            punch.location_type === 'Office' 
+                                                                                ? 'bg-blue-100 text-blue-700' 
+                                                                                : 'bg-purple-100 text-purple-700'
+                                                                        }`}>
+                                                                            {punch.location_type}
+                                                                        </span>
+                                                                        {punch.office_location && (
+                                                                            <span className="text-xs text-gray-500">
+                                                                                {punch.office_location}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <p className="text-xs font-bold text-gray-800">
-                                                                {format(parseISO(punch.punch_time), 'hh:mm a')}
-                                                            </p>
+                                                            <div className="text-right">
+                                                                <p className="text-xs text-gray-500">
+                                                                    {format(parseISO(punch.punch_time), 'MMM dd, yyyy')}
+                                                                </p>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <p className="text-sm text-gray-500">No punch history available for this date</p>
+                                                    {selectedLog.check_in && (
+                                                        <div className="mt-4 space-y-2">
+                                                            <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                                                                <span className="text-sm text-gray-600">First Check In</span>
+                                                                <span className="text-sm font-medium text-gray-900">
+                                                                    {format(parseISO(selectedLog.check_in), 'hh:mm a')}
+                                                                </span>
+                                                            </div>
+                                                            {selectedLog.check_out && (
+                                                                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                                                                    <span className="text-sm text-gray-600">Last Check Out</span>
+                                                                    <span className="text-sm font-medium text-gray-900">
+                                                                        {format(parseISO(selectedLog.check_out), 'hh:mm a')}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="text-center py-8 text-gray-500">
@@ -757,7 +818,89 @@ export default function AttendanceLogsPage() {
                 </div>
             )}
                 </div>
+                </div>
             </div>
+
+            {/* All Employees Logs (HR Admin/Manager only) - Below Calendar */}
+            {selectedDate && (isHrAdmin || isManager) && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        All Employees - {format(selectedDate, 'MMMM d, yyyy')}
+                    </h3>
+                    
+                    {loadingAllLogs ? (
+                        <div className="text-center py-8 text-gray-500">
+                            <p className="text-sm">Loading attendance data...</p>
+                        </div>
+                    ) : allEmployeesLogs.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Employee Name</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Employee ID</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Check In</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Check Out</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Hours</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Location</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {allEmployeesLogs.map((log, index) => (
+                                        <tr key={log.employee || index} className="hover:bg-gray-50 transition">
+                                            <td className="py-3 px-4 text-gray-900 font-medium">
+                                                {log.employee_name || '-'}
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-600">
+                                                {log.employee_id || '-'}
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-600">
+                                                {log.check_in ? format(parseISO(log.check_in), 'hh:mm a') : '-'}
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-600">
+                                                {log.check_out ? format(parseISO(log.check_out), 'hh:mm a') : '-'}
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-600">
+                                                {log.working_hours ? `${log.working_hours.toFixed(2)} hrs` : '-'}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                    log.status === 'Present' ? 'bg-green-100 text-green-700' :
+                                                    log.status === 'Absent' ? 'bg-red-100 text-red-700' :
+                                                    log.status === 'Half Day' ? 'bg-orange-100 text-orange-700' :
+                                                    log.status === 'On Leave' ? 'bg-gray-100 text-gray-700' :
+                                                    log.status === 'Working Remotely' ? 'bg-indigo-100 text-indigo-700' :
+                                                    'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                    {log.status}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                {log.location_type ? (
+                                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                                        log.location_type === 'Office' 
+                                                            ? 'bg-blue-100 text-blue-700' 
+                                                            : 'bg-purple-100 text-purple-700'
+                                                    }`}>
+                                                        {log.location_type}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <p className="text-sm">No attendance records found for this date</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

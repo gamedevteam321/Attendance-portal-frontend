@@ -63,13 +63,13 @@ export default function EmployeeDetailsPage() {
     const fetchLeaveData = async () => {
         if (!id) return
         try {
-            console.log('Fetching leave data for employee:', id)
+            //console.log('Fetching leave data for employee:', id)
             const balRes = await getBalances({ employee: id })
             const balances = (balRes as any)?.message || balRes || []
             console.log('Leave balances:', balances)
             setLeaveBalances(balances)
         } catch (error) {
-            console.error('Failed to fetch leave data:', error)
+            //console.error('Failed to fetch leave data:', error)
         }
     }
 

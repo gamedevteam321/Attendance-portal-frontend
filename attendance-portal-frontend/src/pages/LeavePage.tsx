@@ -149,12 +149,7 @@ export default function LeavePage() {
                         )
                     })}
                 </div>
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded-lg">
-                    <p className="text-xs sm:text-sm text-blue-800">
-                        <strong>Note:</strong> You receive 1 Casual Leave and 1 Sick Leave every month.
-                        Sick Leave can go negative, but Casual Leave cannot.
-                    </p>
-                </div>
+                
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">

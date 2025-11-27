@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 
 interface AttendanceLog {
     name: string
+    attendance_date?: string
     check_in: string | null
     check_out: string | null
     location_type: string
@@ -62,6 +63,7 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
     const [todayLog, setTodayLog] = useState<AttendanceLog[]>([])
     const [locationStatus, setLocationStatus] = useState<'In Office' | 'Working Remote' | 'Working Remote (Pending)' | 'Out of Office' | 'Checking...'>('Checking...')
     const [canPunch, setCanPunch] = useState(false)
+    const [currentDate, setCurrentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
 
     const fetchLogs = async () => {
         try {
@@ -70,7 +72,15 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
                 employee: employeeId,
                 date: today
             })
-            setTodayLog((res as any).message || res || [])
+            const logs = (res as any).message || res || []
+            // Filter to only show today's logs (in case API returns multiple days)
+            const todayLogs = Array.isArray(logs) ? logs.filter((log: any) => {
+                if (!log.attendance_date) return false
+                const logDate = format(new Date(log.attendance_date), 'yyyy-MM-dd')
+                return logDate === today
+            }) : []
+            setTodayLog(todayLogs)
+            setCurrentDate(today) // Update current date
         } catch (error) {
             console.error("Failed to fetch logs", error)
         }
@@ -123,10 +133,52 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
         }
     }, [employeeId])
 
+    // Auto-refresh after midnight - check every minute if date has changed
+    useEffect(() => {
+        const checkDateChange = () => {
+            const today = format(new Date(), 'yyyy-MM-dd')
+            if (today !== currentDate) {
+                // Date has changed (midnight passed)
+                setCurrentDate(today)
+                fetchLogs()
+                checkLocationStatus()
+            }
+        }
+
+        // Check immediately
+        checkDateChange()
+
+        // Set up interval to check every minute
+        const interval = setInterval(checkDateChange, 60000) // Check every minute
+
+        return () => clearInterval(interval)
+    }, [currentDate, employeeId])
+
+    // Also refresh when component becomes visible (user switches tabs/apps)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                const today = format(new Date(), 'yyyy-MM-dd')
+                if (today !== currentDate) {
+                    fetchLogs()
+                    checkLocationStatus()
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }, [currentDate, employeeId])
+
     const mutate = fetchLogs // Alias for compatibility
 
     const activeLog = todayLog?.[0]
-    const isPunchedIn = activeLog && activeLog.check_in && !activeLog.check_out
+    // Only consider punched in if log is from today and has check_in but no check_out
+    const isPunchedIn = activeLog && 
+                        activeLog.attendance_date && 
+                        format(new Date(activeLog.attendance_date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') &&
+                        activeLog.check_in && 
+                        !activeLog.check_out
 
     const handlePunch = async (action: 'IN' | 'OUT') => {
         try {
