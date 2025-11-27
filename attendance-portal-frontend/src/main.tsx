@@ -8,8 +8,8 @@ import App from './App.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <FrappeProvider
-      //url="https://admin.orgatek.net"
-      url="http://localhost:8000"
+      url="https://admin.orgatek.net"
+      //url="http://localhost:8000"
       socketPort="9000"
       tokenParams={{
         useToken: true,

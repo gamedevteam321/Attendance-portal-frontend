@@ -27,9 +27,11 @@ export default function ReportOptionsModal({ isOpen, onClose, onDownload, isDown
 
     const { data: employees } = useFrappeGetDocList('Employee', {
         fields: ['name', 'employee_name', 'status'],
-        filters: { status: 'Active' },
         limit: 1000
     })
+
+    // Filter active employees client-side
+    const activeEmployees = employees?.filter(emp => emp.status === 'Active') || []
 
     useEffect(() => {
         if (isOpen) {
@@ -98,10 +100,10 @@ export default function ReportOptionsModal({ isOpen, onClose, onDownload, isDown
         )
     }
 
-    const filteredEmployees = employees?.filter(emp =>
+    const filteredEmployees = activeEmployees.filter(emp =>
         emp.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || []
+    )
 
     if (!isOpen) return null
 
@@ -229,7 +231,7 @@ export default function ReportOptionsModal({ isOpen, onClose, onDownload, isDown
                                 required
                             >
                                 <option value="">Select Employee</option>
-                                {employees?.map(emp => (
+                                {activeEmployees.map(emp => (
                                     <option key={emp.name} value={emp.name}>
                                         {emp.employee_name} ({emp.name})
                                     </option>
