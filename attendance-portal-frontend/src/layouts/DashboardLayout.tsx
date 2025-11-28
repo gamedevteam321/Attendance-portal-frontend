@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
+import MobileBottomNav from '../components/MobileBottomNav'
 import { useAuth } from '../contexts/AuthContext'
 import { useSidebar } from '../contexts/SidebarContext'
 
@@ -45,10 +46,11 @@ export default function DashboardLayout() {
                 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
             `}>
                 <Header title={getTitle(location.pathname)} />
-                <main className="flex-1 p-4 sm:p-6 lg:p-8">
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">
                     <Outlet />
                 </main>
             </div>
+            <MobileBottomNav />
         </div>
     )
 }

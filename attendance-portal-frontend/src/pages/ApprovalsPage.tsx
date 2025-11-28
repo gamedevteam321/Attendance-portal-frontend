@@ -183,64 +183,151 @@ export default function ApprovalsPage() {
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-                <button
-                    onClick={() => setActiveTab('leave')}
-                    className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'leave'
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                        : 'bg-white text-gray-600 hover:bg-gray-100'
+            {/* Tabs - Mobile & Tablet Design */}
+            <div className="mb-6 lg:mb-8">
+                {/* Mobile & Tablet Tab Navigation */}
+                <div className="lg:hidden bg-gray-100 rounded-2xl p-1.5 md:p-2 flex items-center gap-1.5 md:gap-2">
+                    <button
+                        onClick={() => setActiveTab('leave')}
+                        className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl font-medium transition-all ${
+                            activeTab === 'leave'
+                                ? 'bg-blue-600 text-white shadow-md flex-1 min-w-0'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 w-10 h-10 md:w-12 md:h-12 justify-center flex-shrink-0'
                         }`}
-                >
-                    Leave Applications
-                    {currentLeaves.length > 0 && (
-                        <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {currentLeaves.length}
-                        </span>
-                    )}
-                </button>
-                <button
-                    onClick={() => setActiveTab('remote')}
-                    className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'remote'
-                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
-                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                    >
+                        <span className="material-symbols-rounded text-lg md:text-xl flex-shrink-0">event_note</span>
+                        {activeTab === 'leave' && (
+                            <>
+                                <span className="text-xs md:text-sm font-semibold whitespace-nowrap truncate">Leave</span>
+                                {currentLeaves.length > 0 && (
+                                    <span className="ml-auto bg-white/20 px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold flex-shrink-0">
+                                        {currentLeaves.length}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('remote')}
+                        className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl font-medium transition-all ${
+                            activeTab === 'remote'
+                                ? 'bg-blue-600 text-white shadow-md flex-1 min-w-0'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 w-10 h-10 md:w-12 md:h-12 justify-center flex-shrink-0'
                         }`}
-                >
-                    Remote Work
-                    {currentRemoteRequests.length > 0 && (
-                        <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {currentRemoteRequests.length}
-                        </span>
-                    )}
-                </button>
-                <button
-                    onClick={() => setActiveTab('regularization')}
-                    className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'regularization'
-                        ? 'bg-orange-600 text-white shadow-lg shadow-orange-200'
-                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                    >
+                        <span className="material-symbols-rounded text-lg md:text-xl flex-shrink-0">home_work</span>
+                        {activeTab === 'remote' && (
+                            <>
+                                <span className="text-xs md:text-sm font-semibold whitespace-nowrap truncate">Remote</span>
+                                {currentRemoteRequests.length > 0 && (
+                                    <span className="ml-auto bg-white/20 px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold flex-shrink-0">
+                                        {currentRemoteRequests.length}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('regularization')}
+                        className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl font-medium transition-all ${
+                            activeTab === 'regularization'
+                                ? 'bg-blue-600 text-white shadow-md flex-1 min-w-0'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 w-10 h-10 md:w-12 md:h-12 justify-center flex-shrink-0'
                         }`}
-                >
-                    Regularization
-                    {currentRegularizationRequests.length > 0 && (
-                        <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {currentRegularizationRequests.length}
-                        </span>
-                    )}
-                </button>
-                <button
-                    onClick={() => setActiveTab('punchout')}
-                    className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'punchout'
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                    >
+                        <span className="material-symbols-rounded text-lg md:text-xl flex-shrink-0">schedule</span>
+                        {activeTab === 'regularization' && (
+                            <>
+                                <span className="text-xs md:text-sm font-semibold whitespace-nowrap truncate">Regularization</span>
+                                {currentRegularizationRequests.length > 0 && (
+                                    <span className="ml-auto bg-white/20 px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold flex-shrink-0">
+                                        {currentRegularizationRequests.length}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('punchout')}
+                        className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl font-medium transition-all ${
+                            activeTab === 'punchout'
+                                ? 'bg-blue-600 text-white shadow-md flex-1 min-w-0'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 w-10 h-10 md:w-12 md:h-12 justify-center flex-shrink-0'
                         }`}
-                >
-                    Punch Out Requests
-                    {currentPunchOutRequests.length > 0 && (
-                        <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {currentPunchOutRequests.length}
-                        </span>
-                    )}
-                </button>
+                    >
+                        <span className="material-symbols-rounded text-lg md:text-xl flex-shrink-0">logout</span>
+                        {activeTab === 'punchout' && (
+                            <>
+                                <span className="text-xs md:text-sm font-semibold whitespace-nowrap truncate">Punch Out</span>
+                                {currentPunchOutRequests.length > 0 && (
+                                    <span className="ml-auto bg-white/20 px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold flex-shrink-0">
+                                        {currentPunchOutRequests.length}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                {/* Desktop Tab Navigation */}
+                <div className="hidden lg:flex gap-4 overflow-x-auto pb-2">
+                    <button
+                        onClick={() => setActiveTab('leave')}
+                        className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'leave'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                            }`}
+                    >
+                        Leave Applications
+                        {currentLeaves.length > 0 && (
+                            <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                                {currentLeaves.length}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('remote')}
+                        className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'remote'
+                            ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                            }`}
+                    >
+                        Remote Work
+                        {currentRemoteRequests.length > 0 && (
+                            <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                                {currentRemoteRequests.length}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('regularization')}
+                        className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'regularization'
+                            ? 'bg-orange-600 text-white shadow-lg shadow-orange-200'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                            }`}
+                    >
+                        Regularization
+                        {currentRegularizationRequests.length > 0 && (
+                            <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                                {currentRegularizationRequests.length}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('punchout')}
+                        className={`px-6 py-2 rounded-full font-medium transition whitespace-nowrap ${activeTab === 'punchout'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                            }`}
+                    >
+                        Punch Out Requests
+                        {currentPunchOutRequests.length > 0 && (
+                            <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                                {currentPunchOutRequests.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {isLoading ? (
