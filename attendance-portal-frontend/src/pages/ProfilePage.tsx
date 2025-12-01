@@ -103,6 +103,7 @@ export default function ProfilePage() {
     const handleAvatarSelect = async (style: string) => {
         if (!employeeId) return
         
+        setSelectedAvatarStyle(style)
         setUploadingPhoto(true)
         try {
             const avatarUrl = `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(employeeName || user || 'User')}`
