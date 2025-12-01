@@ -15,6 +15,12 @@ interface AttendanceLog {
     location_type: string
     status: string
     working_hours: number
+    punch_history?: {
+        punch_type: string
+        punch_time: string
+        location_type: string
+        office_location?: string
+    }[]
 }
 
 export default function HomePage() {
@@ -177,12 +183,54 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
     const mutate = fetchLogs // Alias for compatibility
 
     const activeLog = todayLog?.[0]
-    // Only consider punched in if log is from today and has check_in but no check_out
+    
+    // Get first punch IN and last punch OUT from punch history
+    const getFirstPunchIn = (log: AttendanceLog | undefined): string | null => {
+        if (!log?.punch_history || log.punch_history.length === 0) {
+            return log?.check_in || null
+        }
+        const sortedHistory = [...log.punch_history].sort((a, b) => 
+            new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+        )
+        const firstIn = sortedHistory.find(p => p.punch_type === 'IN')
+        return firstIn ? firstIn.punch_time : (log.check_in || null)
+    }
+
+    const getLastPunchOut = (log: AttendanceLog | undefined): string | null => {
+        if (!log?.punch_history || log.punch_history.length === 0) {
+            return log?.check_out || null
+        }
+        const sortedHistory = [...log.punch_history].sort((a, b) => 
+            new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+        )
+        const outPunches = sortedHistory.filter(p => p.punch_type === 'OUT')
+        const lastOut = outPunches.length > 0 ? outPunches[outPunches.length - 1] : null
+        return lastOut ? lastOut.punch_time : (log.check_out || null)
+    }
+
+    const getLastPunchType = (log: AttendanceLog | undefined): 'IN' | 'OUT' | null => {
+        if (!log?.punch_history || log.punch_history.length === 0) {
+            // Fallback to check_in/check_out logic
+            if (log?.check_in && !log?.check_out) return 'IN'
+            if (log?.check_out) return 'OUT'
+            return null
+        }
+        const sortedHistory = [...log.punch_history].sort((a, b) => 
+            new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+        )
+        const lastPunch = sortedHistory[sortedHistory.length - 1]
+        return lastPunch ? (lastPunch.punch_type as 'IN' | 'OUT') : null
+    }
+
+    const firstPunchIn = getFirstPunchIn(activeLog)
+    const lastPunchOut = getLastPunchOut(activeLog)
+    const lastPunchType = getLastPunchType(activeLog)
+    
+    // Consider punched in if log is from today and the last punch is IN
     const isPunchedIn = activeLog && 
                         activeLog.attendance_date && 
                         format(new Date(activeLog.attendance_date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') &&
-                        activeLog.check_in && 
-                        !activeLog.check_out
+                        lastPunchType === 'IN'
 
     const handlePunch = async (action: 'IN' | 'OUT') => {
         try {
@@ -315,13 +363,13 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <StatCard
                     title="Check In"
-                    value={activeLog?.check_in ? format(new Date(activeLog.check_in), 'hh:mm a') : '--:--'}
+                    value={firstPunchIn ? format(new Date(firstPunchIn), 'hh:mm a') : '--:--'}
                     icon="login"
                     color="bg-blue-500"
                 />
                 <StatCard
                     title="Check Out"
-                    value={activeLog?.check_out ? format(new Date(activeLog.check_out), 'hh:mm a') : '--:--'}
+                    value={lastPunchOut ? format(new Date(lastPunchOut), 'hh:mm a') : '--:--'}
                     icon="logout"
                     color="bg-indigo-500"
                 />

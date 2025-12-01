@@ -4,6 +4,7 @@ import { useFrappeGetDoc, useFrappePostCall } from 'frappe-react-sdk'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns'
 import EditEmployeeModal from '../components/EditEmployeeModal'
 import { useAuth } from '../contexts/AuthContext'
+import { getImageUrl } from '../utils/imageUtils'
 
 export default function EmployeeDetailsPage() {
     const { id } = useParams<{ id: string }>()
@@ -94,11 +95,11 @@ export default function EmployeeDetailsPage() {
                     </button>
                 )}
 
-                <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-3xl">
-                    {employee.image ? (
-                        <img src={employee.image} alt={employee.employee_name} className="w-full h-full rounded-full object-cover" />
+                <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-3xl overflow-hidden">
+                    {getImageUrl(employee.image) ? (
+                        <img src={getImageUrl(employee.image) || ''} alt={employee.employee_name} className="w-full h-full rounded-full object-cover" />
                     ) : (
-                        employee.employee_name.charAt(0)
+                        <span>{employee.employee_name.charAt(0)}</span>
                     )}
                 </div>
                 <div className="text-center md:text-left flex-1">

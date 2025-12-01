@@ -18,7 +18,8 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
         designation: '',
         reports_to: '',
         status: '',
-        office: '',
+        company: '',
+        offices: [] as string[],
         holiday_list: ''
     })
     const [loading, setLoading] = useState(false)
@@ -32,11 +33,15 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
     // Fetch lists for dropdowns
     const { data: designations } = useFrappeGetDocList('Designation', { fields: ['name'], limit: 100 })
     const { data: employees } = useFrappeGetDocList('Employee', { fields: ['name', 'employee_name'], limit: 100 })
-    const { data: offices } = useFrappeGetDocList('Office Location', { fields: ['name', 'office_name'] })
+    const { data: companies } = useFrappeGetDocList('Company', { fields: ['name'] })
+    const { data: offices } = useFrappeGetDocList('Office Location', { fields: ['name', 'office_name', 'company'] })
     const { data: holidayLists } = useFrappeGetDocList('Holiday List', { fields: ['name', 'holiday_list_name'] })
 
     useEffect(() => {
         if (employee) {
+            // Extract all office locations
+            const officeLocations = employee.allowed_locations?.map((loc: any) => loc.office).filter(Boolean) || []
+            
             setFormData({
                 first_name: employee.first_name || '',
                 last_name: employee.last_name || '',
@@ -45,7 +50,8 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
                 designation: employee.designation || '',
                 reports_to: employee.reports_to || '',
                 status: employee.status || 'Active',
-                office: employee.allowed_locations?.[0]?.office || '',
+                company: employee.company || '',
+                offices: officeLocations,
                 holiday_list: employee.holiday_list || ''
             })
         }
@@ -58,7 +64,16 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
         try {
             await updateEmployee({
                 employee_id: employeeId,
-                ...formData
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                email: formData.email,
+                designation: formData.designation,
+                reports_to: formData.reports_to,
+                status: formData.status,
+                company: formData.company,
+                offices: formData.offices,
+                password: formData.password || undefined,
+                holiday_list: formData.holiday_list || undefined
             })
             toast.success('Employee updated successfully!')
             onSuccess()
@@ -143,17 +158,56 @@ export default function EditEmployeeModal({ isOpen, onClose, onSuccess, employee
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Office Location</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
                             <select
-                                value={formData.office}
-                                onChange={e => setFormData({ ...formData, office: e.target.value })}
+                                value={formData.company}
+                                onChange={e => setFormData({ ...formData, company: e.target.value })}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             >
-                                <option value="">Select Office</option>
-                                {offices?.map(o => (
-                                    <option key={o.name} value={o.name}>{o.office_name}</option>
+                                <option value="">Select Company</option>
+                                {companies?.map(c => (
+                                    <option key={c.name} value={c.name}>{c.name}</option>
                                 ))}
                             </select>
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Office Locations
+                                <span className="text-xs text-gray-500 font-normal ml-2">(Select one or more)</span>
+                            </label>
+                            <div className="space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                                {offices?.map(o => (
+                                    <label key={o.name} className="flex items-start gap-3 cursor-pointer group hover:bg-white/50 p-2 rounded transition">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.offices.includes(o.name)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setFormData({ ...formData, offices: [...formData.offices, o.name] })
+                                                } else {
+                                                    setFormData({ ...formData, offices: formData.offices.filter(office => office !== o.name) })
+                                                }
+                                            }}
+                                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <div className="flex-1">
+                                            <span className="text-sm font-medium text-gray-800">{o.office_name}</span>
+                                            {o.company && (
+                                                <p className="text-xs text-gray-500 mt-0.5">Company: {o.company}</p>
+                                            )}
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                            {formData.offices.length > 0 && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Selected: {formData.offices.map(officeId => {
+                                        const office = offices?.find(o => o.name === officeId)
+                                        return office?.office_name || officeId
+                                    }).join(', ')}
+                                </p>
+                            )}
                         </div>
 
                         <div>

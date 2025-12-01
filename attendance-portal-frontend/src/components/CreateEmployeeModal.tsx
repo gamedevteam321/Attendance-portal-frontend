@@ -20,7 +20,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         date_of_joining: '',
         reports_to: '',
         company: '',
-        office: '',
+        offices: [] as string[],
         holiday_list: '',
         roles: ['Employee'] // Default role - Employee is always required
     })
@@ -40,7 +40,16 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         setLoading(true)
 
         try {
-            await createEmployee(formData)
+            // Validate at least one office is selected
+            if (formData.offices.length === 0) {
+                toast.error('Please select at least one office location')
+                return
+            }
+            
+            await createEmployee({
+                ...formData,
+                offices: formData.offices
+            })
             toast.success('Employee created successfully!')
             onSuccess()
             onClose()
@@ -56,7 +65,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                 date_of_joining: '',
                 reports_to: '',
                 company: '',
-                office: '',
+                offices: [],
                 holiday_list: '',
                 roles: ['Employee']
             })
@@ -164,19 +173,46 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Office Location <span className="text-red-500">*</span></label>
-                            <select
-                                required
-                                value={formData.office}
-                                onChange={e => setFormData({ ...formData, office: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Select Office</option>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                                Office Locations <span className="text-red-500">*</span>
+                                <span className="text-xs text-gray-500 font-normal ml-2">(Select one or more)</span>
+                            </label>
+                            <div className="space-y-2 p-3 sm:p-4 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
                                 {offices?.map(o => (
-                                    <option key={o.name} value={o.name}>{o.office_name}</option>
+                                    <label key={o.name} className="flex items-start gap-3 cursor-pointer group hover:bg-white/50 p-2 rounded transition">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.offices.includes(o.name)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setFormData({ ...formData, offices: [...formData.offices, o.name] })
+                                                } else {
+                                                    setFormData({ ...formData, offices: formData.offices.filter(office => office !== o.name) })
+                                                }
+                                            }}
+                                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <div className="flex-1">
+                                            <span className="text-sm sm:text-base font-medium text-gray-800">{o.office_name}</span>
+                                            {o.company && (
+                                                <p className="text-xs text-gray-500 mt-0.5">Company: {o.company}</p>
+                                            )}
+                                        </div>
+                                    </label>
                                 ))}
-                            </select>
+                            </div>
+                            {formData.offices.length === 0 && (
+                                <p className="text-xs text-red-500 mt-1">Please select at least one office location</p>
+                            )}
+                            {formData.offices.length > 0 && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Selected: {formData.offices.map(officeId => {
+                                        const office = offices?.find(o => o.name === officeId)
+                                        return office?.office_name || officeId
+                                    }).join(', ')}
+                                </p>
+                            )}
                         </div>
 
                         <div>

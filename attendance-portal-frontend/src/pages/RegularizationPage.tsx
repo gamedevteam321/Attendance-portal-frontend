@@ -77,6 +77,27 @@ export default function RegularizationPage() {
         e.preventDefault()
         if (!selectedDate) return
 
+        // Validate that check-out time is >= check-in time
+        if (checkIn && checkOut) {
+            const dateStr = format(selectedDate, 'yyyy-MM-dd')
+            const checkInDateTime = `${dateStr} ${checkIn}:00`
+            const checkOutDateTime = `${dateStr} ${checkOut}:00`
+            
+            try {
+                const checkInTime = parseISO(checkInDateTime)
+                const checkOutTime = parseISO(checkOutDateTime)
+                
+                if (checkOutTime < checkInTime) {
+                    toast.error('Check-out time must be equal to or greater than check-in time')
+                    return
+                }
+            } catch (error) {
+                console.error('Error validating times:', error)
+                toast.error('Invalid time format')
+                return
+            }
+        }
+
         try {
             // Combine date and time
             const dateStr = format(selectedDate, 'yyyy-MM-dd')
@@ -312,7 +333,13 @@ export default function RegularizationPage() {
                                     <input
                                         type="time"
                                         value={checkIn}
-                                        onChange={e => setCheckIn(e.target.value)}
+                                        onChange={e => {
+                                            setCheckIn(e.target.value)
+                                            // Reset check-out if it becomes invalid (earlier than new check-in)
+                                            if (checkOut && e.target.value && checkOut < e.target.value) {
+                                                setCheckOut('')
+                                            }
+                                        }}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
@@ -321,9 +348,22 @@ export default function RegularizationPage() {
                                     <input
                                         type="time"
                                         value={checkOut}
-                                        onChange={e => setCheckOut(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        min={checkIn || undefined}
+                                        onChange={e => {
+                                            const newCheckOut = e.target.value
+                                            // Prevent selecting checkout time before check-in time
+                                            if (checkIn && newCheckOut && newCheckOut < checkIn) {
+                                                toast.error('Check-out time must be equal to or greater than check-in time')
+                                                return // Don't update the value
+                                            }
+                                            setCheckOut(newCheckOut)
+                                        }}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                        disabled={!checkIn}
                                     />
+                                    {checkIn && checkOut && checkOut < checkIn && (
+                                        <p className="text-xs text-red-600 mt-1">Check-out must be after check-in time</p>
+                                    )}
                                 </div>
                             </div>
 

@@ -5,6 +5,7 @@ import CreateEmployeeModal from '../components/CreateEmployeeModal'
 import ReportOptionsModal from '../components/ReportOptionsModal'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import { getImageUrl } from '../utils/imageUtils'
 
 interface Employee {
     name: string
@@ -193,11 +194,11 @@ export default function EmployeeManagementPage() {
                     >
                         <div className="flex items-start justify-between mb-3 sm:mb-4">
                             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-base sm:text-lg flex-shrink-0">
-                                    {employee.image ? (
-                                        <img src={employee.image} alt={employee.employee_name} className="w-full h-full rounded-full object-cover" />
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-base sm:text-lg flex-shrink-0 overflow-hidden">
+                                    {getImageUrl(employee.image) ? (
+                                        <img src={getImageUrl(employee.image) || ''} alt={employee.employee_name} className="w-full h-full rounded-full object-cover" />
                                     ) : (
-                                        employee.employee_name.charAt(0)
+                                        <span>{employee.employee_name.charAt(0)}</span>
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">

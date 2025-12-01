@@ -1,11 +1,30 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import NotificationDropdown from './NotificationDropdown'
 import { useSidebar } from '../contexts/SidebarContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useFrappeGetDoc } from 'frappe-react-sdk'
+import { getImageUrl } from '../utils/imageUtils'
 
 export default function Header({ title }: { title: string }) {
     const { toggleSidebar, isCollapsed } = useSidebar()
-    const { employeeName } = useAuth()
+    const { employeeName, employeeId } = useAuth()
+    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', {
+        enabled: !!employeeId
+    })
+    const [imageError, setImageError] = useState(false)
+
+    useEffect(() => {
+        // if (employee && process.env.NODE_ENV === 'development') {
+        //     console.log('Employee data in Header:', {
+        //         employeeId,
+        //         hasImage: !!employee.image,
+        //         imageValue: employee.image,
+        //         imageUrl: getImageUrl(employee.image)
+        //     })
+        // }
+        setImageError(false)
+    }, [employee, employeeId])
 
     return (
         <header className="bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
@@ -26,15 +45,28 @@ export default function Header({ title }: { title: string }) {
 
             <div className="flex items-center gap-2 sm:gap-3">
                 <NotificationDropdown />
+                {/* Profile photo - only show on tablets and mobile (hide on desktop/laptop) */}
                 <Link 
                     to="/profile" 
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden hover:opacity-80 transition cursor-pointer border border-gray-200 flex-shrink-0"
+                    className="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden hover:opacity-80 transition cursor-pointer border border-gray-200 flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm relative"
                 >
-                    <img
-                        src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(employeeName || 'User')}`}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                    />
+                    {(() => {
+                        const imageUrl = getImageUrl(employee?.image)
+                        if (imageUrl && !imageError) {
+                            return (
+                                <img
+                                    src={imageUrl}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                    onError={() => {
+                                        console.error('Failed to load profile image:', imageUrl)
+                                        setImageError(true)
+                                    }}
+                                />
+                            )
+                        }
+                        return <span>{employeeName?.charAt(0) || 'U'}</span>
+                    })()}
                 </Link>
             </div>
         </header>

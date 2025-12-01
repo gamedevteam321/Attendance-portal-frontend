@@ -1,11 +1,34 @@
+import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSidebar } from '../contexts/SidebarContext'
+import { useFrappeGetDoc } from 'frappe-react-sdk'
+import { getImageUrl } from '../utils/imageUtils'
 
 export default function Sidebar() {
     const location = useLocation()
-    const { isManager, isHrAdmin, employeeName, logout } = useAuth()
+    const { isManager, isHrAdmin, employeeName, employeeId, logout } = useAuth()
     const { isCollapsed, isMobileMenuOpen, closeMobileMenu } = useSidebar()
+    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', {
+        enabled: !!employeeId
+    })
+    const [imageError, setImageError] = React.useState(false)
+
+    // Debug: Log employee data to check image field
+    React.useEffect(() => {
+        // if (employee && process.env.NODE_ENV === 'development') {
+        //     console.log('Employee data in Sidebar:', 
+        //         {
+        //         employeeId,
+        //         hasImage: !!employee.image,
+        //         imageValue: employee.image,
+        //         imageType: typeof employee.image,
+        //         imageUrl: getImageUrl(employee.image)
+        //     })
+        // }
+        // Reset image error when employee data changes
+        setImageError(false)
+    }, [employee, employeeId])
 
     const isActive = (path: string) => location.pathname === path
 
@@ -85,37 +108,47 @@ export default function Sidebar() {
                     ))}
                 </nav>
 
-                {/* Profile Section - Fixed at bottom */}
-                <div className="p-4 border-t border-gray-100 flex-shrink-0 bg-white">
+                {/* Profile Section - Fixed at bottom (only show on desktop/laptop) */}
+                <div className="hidden lg:block p-4 border-t border-gray-100 flex-shrink-0 bg-white">
                     <div className={`flex items-center gap-3 px-2 ${isCollapsed ? 'lg:justify-center' : ''}`}>
                         <Link 
                             to="/profile" 
                             onClick={handleLinkClick}
-                            className="w-10 h-10 rounded-full overflow-hidden hover:opacity-80 transition cursor-pointer border border-gray-200 flex-shrink-0"
+                            className="w-10 h-10 rounded-full overflow-hidden hover:opacity-80 transition cursor-pointer border border-gray-200 flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm relative"
                         >
-                            <img
-                                src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(employeeName || 'User')}`}
-                                alt="Profile"
-                                className="w-full h-full object-cover"
-                            />
+                            {(() => {
+                                const imageUrl = getImageUrl(employee?.image)
+                                if (imageUrl && !imageError) {
+                                    return (
+                                        <img
+                                            src={imageUrl}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                            onError={() => {
+                                                console.error('Failed to load profile image:', imageUrl)
+                                                setImageError(true)
+                                            }}
+                                        />
+                                    )
+                                }
+                                return <span>{employeeName?.charAt(0) || 'U'}</span>
+                            })()}
                         </Link>
-                        {/* Show username on mobile when menu is open, or on desktop when not collapsed */}
-                        {(!isCollapsed || isMobileMenuOpen) && (
+                        {/* Show username on desktop when not collapsed */}
+                        {!isCollapsed && (
                             <>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 truncate">{employeeName}</p>
                                     <p className="text-xs text-gray-500 truncate">Employee</p>
                                 </div>
                                 {/* Show logout button only on desktop (lg and above) when not collapsed */}
-                                {!isCollapsed && (
-                                    <button
-                                        onClick={logout}
-                                        className="hidden lg:flex p-2 text-gray-400 hover:text-red-500 transition rounded-lg hover:bg-red-50"
-                                        title="Logout"
-                                    >
-                                        <span className="material-symbols-rounded text-xl">logout</span>
-                                    </button>
-                                )}
+                                <button
+                                    onClick={logout}
+                                    className="p-2 text-gray-400 hover:text-red-500 transition rounded-lg hover:bg-red-50"
+                                    title="Logout"
+                                >
+                                    <span className="material-symbols-rounded text-xl">logout</span>
+                                </button>
                             </>
                         )}
                     </div>

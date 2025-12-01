@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useFrappeGetDoc, useFrappePostCall } from 'frappe-react-sdk'
 import { useAuth } from '../contexts/AuthContext'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { getImageUrl } from '../utils/imageUtils'
+import ImageCropModal from '../components/ImageCropModal'
 
 export default function ProfilePage() {
     const { employeeId, employeeName, isManager, isHrAdmin, user, logout } = useAuth()
@@ -13,13 +15,21 @@ export default function ProfilePage() {
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [changingPassword, setChangingPassword] = useState(false)
+    const [showPhotoModal, setShowPhotoModal] = useState(false)
+    const [selectedAvatarStyle, setSelectedAvatarStyle] = useState('avataaars')
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    const [showCropModal, setShowCropModal] = useState(false)
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', {
+    const { data: employee, mutate: refetchEmployee } = useFrappeGetDoc('Employee', employeeId || '', {
         enabled: !!employeeId
     })
 
     const { call: getBalances } = useFrappePostCall('attendance_portal.api.get_leave_balances')
     const { call: updatePassword } = useFrappePostCall('frappe.core.doctype.user.user.update_password')
+    const { call: updateProfilePhoto } = useFrappePostCall('attendance_portal.api.update_employee_profile_photo')
+    const { call: uploadFile } = useFrappePostCall('attendance_portal.api.upload_profile_photo')
 
     useEffect(() => {
         const fetchLeaveData = async () => {
@@ -79,6 +89,119 @@ export default function ProfilePage() {
         }
     }
 
+    const avatarStyles = [
+        { id: 'avataaars', name: 'Avataaars', icon: '👤' },
+        { id: 'micah', name: 'Micah', icon: '😊' },
+        { id: 'open-peeps', name: 'Open Peeps', icon: '🧑' },
+        { id: 'personas', name: 'Personas', icon: '👨' },
+        { id: 'pixel-art', name: 'Pixel Art', icon: '🎮' },
+        { id: 'bottts', name: 'Bottts', icon: '🤖' },
+        { id: 'lorelei', name: 'Lorelei', icon: '👩' },
+        { id: 'notionists', name: 'Notionists', icon: '💼' },
+    ]
+
+    const handleAvatarSelect = async (style: string) => {
+        if (!employeeId) return
+        
+        setUploadingPhoto(true)
+        try {
+            const avatarUrl = `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(employeeName || user || 'User')}`
+            await updateProfilePhoto({ image_url: avatarUrl })
+            toast.success('Profile photo updated successfully')
+            setShowPhotoModal(false)
+            refetchEmployee()
+        } catch (error: any) {
+            console.error('Failed to update profile photo:', error)
+            toast.error(error?.message || error?.exception || 'Failed to update profile photo')
+        } finally {
+            setUploadingPhoto(false)
+        }
+    }
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file')
+            return
+        }
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast.error('Image size should be less than 5MB')
+            return
+        }
+
+        // Read file and show crop modal
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            const imageSrc = reader.result as string
+            setImageToCrop(imageSrc)
+            setShowCropModal(true)
+        }
+        reader.onerror = () => {
+            toast.error('Failed to read file')
+        }
+        reader.readAsDataURL(file)
+        
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
+    }
+
+    const handleCropComplete = async (croppedImage: string) => {
+        setShowCropModal(false)
+        setUploadingPhoto(true)
+        
+        try {
+            // Extract base64 string from data URL
+            const base64String = croppedImage.split(',')[1]
+            const filename = `profile_${Date.now()}.jpg`
+
+            // Upload file using Frappe API
+            const fileDoc = await uploadFile({
+                content: base64String,
+                filename: filename,
+                dt: 'Employee',
+                dn: employeeId,
+                fieldname: 'image'
+            })
+
+            // Get the file URL - handle different response structures
+            let fileUrl: string | null = null
+            const response = (fileDoc as any)?.message || fileDoc
+            
+            if (typeof response === 'string') {
+                // If response is a string, it might be the file URL
+                fileUrl = response
+            } else if (response?.file_url) {
+                fileUrl = response.file_url
+            } else if (response?.name) {
+                // If we get a file name, construct the URL
+                // Files are typically stored at /files/[filename] or /private/files/[filename]
+                fileUrl = `/files/${response.name}`
+            }
+            
+            if (!fileUrl) {
+                console.error('File upload response:', fileDoc)
+                throw new Error('Failed to get file URL from upload response')
+            }
+
+            // Update employee with the file URL
+            await updateProfilePhoto({ image_url: fileUrl })
+            toast.success('Profile photo updated successfully')
+            setShowPhotoModal(false)
+            setImageToCrop(null)
+            refetchEmployee()
+        } catch (error: any) {
+            console.error('Failed to upload file:', error)
+            toast.error(error?.message || error?.exception || 'Failed to upload photo')
+        } finally {
+            setUploadingPhoto(false)
+        }
+    }
+
     if (loading && employeeId) {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -134,12 +257,23 @@ export default function ProfilePage() {
                 
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 sm:gap-6 md:gap-8">
                     {/* Avatar */}
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-2xl sm:text-3xl md:text-4xl shadow-lg flex-shrink-0">
-                        {employee?.image ? (
-                            <img src={employee.image} alt={employeeName || 'User'} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                            <span>{getInitials(employeeName || user || 'U')}</span>
-                        )}
+                    <div className="relative group">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-2xl sm:text-3xl md:text-4xl shadow-lg flex-shrink-0 overflow-hidden">
+                            {getImageUrl(employee?.image) ? (
+                                <img src={getImageUrl(employee?.image) || ''} alt={employeeName || 'User'} className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                                <span>{getInitials(employeeName || user || 'U')}</span>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setShowPhotoModal(true)}
+                            className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-full flex items-center justify-center transition-all duration-200"
+                            title="Change Profile Photo"
+                        >
+                            <span className="material-symbols-rounded text-white opacity-0 group-hover:opacity-100 text-xl sm:text-2xl transition-opacity">
+                                camera_alt
+                            </span>
+                        </button>
                     </div>
 
                     {/* Basic Info */}
@@ -444,6 +578,106 @@ export default function ProfilePage() {
                     </div>
                 </div>
             )}
+
+            {/* Change Profile Photo Modal */}
+            {showPhotoModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <span className="material-symbols-rounded text-blue-600">photo_camera</span>
+                                <span>Change Profile Photo</span>
+                            </h2>
+                            <button
+                                onClick={() => setShowPhotoModal(false)}
+                                className="text-gray-400 hover:text-gray-600 transition"
+                                disabled={uploadingPhoto}
+                            >
+                                <span className="material-symbols-rounded text-2xl">close</span>
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            {/* Upload Own Photo */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-3">Upload Your Photo</h3>
+                                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileUpload}
+                                        className="hidden"
+                                        disabled={uploadingPhoto}
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploadingPhoto}
+                                        className="flex flex-col items-center gap-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="material-symbols-rounded text-4xl text-gray-400">cloud_upload</span>
+                                        <span className="text-sm font-medium text-gray-700">
+                                            {uploadingPhoto ? 'Uploading...' : 'Click to upload or drag and drop'}
+                                        </span>
+                                        <span className="text-xs text-gray-500">PNG, JPG up to 5MB</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Choose Avatar */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-3">Choose an Avatar</h3>
+                                <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
+                                    {avatarStyles.map((style) => (
+                                        <button
+                                            key={style.id}
+                                            onClick={() => handleAvatarSelect(style.id)}
+                                            disabled={uploadingPhoto}
+                                            className={`
+                                                aspect-square rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2
+                                                transition-all hover:scale-105
+                                                ${selectedAvatarStyle === style.id 
+                                                    ? 'border-blue-500 bg-blue-50' 
+                                                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                                                }
+                                                disabled:opacity-50 disabled:cursor-not-allowed
+                                            `}
+                                        >
+                                            <img
+                                                src={`https://api.dicebear.com/9.x/${style.id}/svg?seed=${encodeURIComponent(employeeName || user || 'User')}`}
+                                                alt={style.name}
+                                                className="w-full h-full object-contain"
+                                            />
+                                            <span className="text-xs font-medium text-gray-700">{style.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {uploadingPhoto && (
+                            <div className="px-6 py-4 bg-blue-50 border-t border-gray-200">
+                                <div className="flex items-center gap-2 text-blue-600">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                                    <span className="text-sm font-medium">Updating profile photo...</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Image Crop Modal */}
+            <ImageCropModal
+                isOpen={showCropModal}
+                imageSrc={imageToCrop || ''}
+                onClose={() => {
+                    setShowCropModal(false)
+                    setImageToCrop(null)
+                }}
+                onCropComplete={handleCropComplete}
+                aspectRatio={1}
+            />
         </div>
     )
 }
