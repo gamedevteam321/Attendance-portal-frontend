@@ -76,6 +76,11 @@ interface HistoryPunchOutRequest extends PunchOutRequest {
     approved_at?: string
 }
 
+function getInitial(name: string | null | undefined, fallback = '?'): string {
+    const s = name ?? fallback
+    return String(s).charAt(0) || fallback
+}
+
 export default function ApprovalsPage() {
     const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending')
     const [activeTab, setActiveTab] = useState<'leave' | 'remote' | 'regularization' | 'punchout'>('leave')
@@ -152,7 +157,8 @@ export default function ApprovalsPage() {
     const currentLeaves = viewMode === 'pending' ? leaves : historyLeaves
     const currentRemoteRequests = viewMode === 'pending' ? remoteRequests : historyRemoteRequests
     const currentRegularizationRequests = viewMode === 'pending' ? regularizationRequests : historyRegularizationRequests
-    const currentPunchOutRequests = viewMode === 'pending' ? punchOutRequests : historyPunchOutRequests
+    const rawPunchOut = viewMode === 'pending' ? punchOutRequests : historyPunchOutRequests
+    const currentPunchOutRequests = (Array.isArray(rawPunchOut) ? rawPunchOut : []).filter((r): r is PunchOutRequest | HistoryPunchOutRequest => r != null)
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -346,7 +352,7 @@ export default function ApprovalsPage() {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                                                {(leave.employee_name || leave.employee || '?')[0]}
+                                                {getInitial(leave.employee_name ?? leave.employee)}
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-gray-800">{leave.employee_name || leave.employee || '—'}</h3>
@@ -423,7 +429,7 @@ export default function ApprovalsPage() {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                                                {(req.employee_name || req.employee || '?')[0]}
+                                                {getInitial(req.employee_name ?? req.employee)}
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-gray-800">{req.employee_name || req.employee || '—'}</h3>
@@ -499,7 +505,7 @@ export default function ApprovalsPage() {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold">
-                                                {(req.employee_name || req.employee || '?')[0]}
+                                                {getInitial(req.employee_name ?? req.employee)}
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-gray-800">{req.employee_name || req.employee || '—'}</h3>
@@ -575,7 +581,7 @@ export default function ApprovalsPage() {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">
-                                                {(req.employee_name || req.employee || '?')[0]}
+                                                {getInitial(req.employee_name ?? req.employee)}
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-gray-800">{req.employee_name || req.employee || '—'}</h3>
