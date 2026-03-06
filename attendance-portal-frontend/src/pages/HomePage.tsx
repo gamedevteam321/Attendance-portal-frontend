@@ -70,6 +70,7 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
 
     const [todayLog, setTodayLog] = useState<AttendanceLog[]>([])
     const [locationStatus, setLocationStatus] = useState<'In Office' | 'Working Remote' | 'Working Remote (Pending)' | 'Out of Office' | 'Checking...'>('Checking...')
+    const [workLocationName, setWorkLocationName] = useState<string | null>(null)
     const [canPunch, setCanPunch] = useState(false)
     const [currentDate, setCurrentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [showPunchOutModal, setShowPunchOutModal] = useState(false)
@@ -113,6 +114,7 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
                 } else {
                     setLocationStatus('Working Remote')
                 }
+                setWorkLocationName('Remote')
                 setCanPunch(true)
                 return
             }
@@ -124,14 +126,19 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
             if (officeData.inside) {
                 setLocationStatus('In Office')
                 setCanPunch(true)
+                // Show work location name: office name or farm field area name
+                const name = officeData.office_name ?? officeData.area_name ?? officeData.office ?? null
+                setWorkLocationName(name)
             } else {
                 setLocationStatus('Out of Office')
                 setCanPunch(false)
+                setWorkLocationName(null)
             }
 
         } catch (error) {
             console.error("Failed to check location status", error)
             setLocationStatus('Out of Office') // Default to safe state
+            setWorkLocationName(null)
             setCanPunch(false)
         }
     }
@@ -401,14 +408,21 @@ function DashboardWidgets({ employeeId }: { employeeId: string }) {
                         <div className="relative z-10">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-2">
                                 <h3 className="text-lg sm:text-xl font-bold text-gray-800">Mark Attendance</h3>
-                                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap ${locationStatus === 'In Office' ? 'bg-green-100 text-green-700' :
-                                        locationStatus === 'Working Remote' ? 'bg-purple-100 text-purple-700' :
-                                            locationStatus === 'Working Remote (Pending)' ? 'bg-yellow-100 text-yellow-700' :
-                                                locationStatus === 'Out of Office' ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-100 text-gray-600'
-                                    }`}>
-                                    {locationStatus}
-                                </span>
+                                <div className="flex flex-col items-end gap-0.5">
+                                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap ${locationStatus === 'In Office' ? 'bg-green-100 text-green-700' :
+                                            locationStatus === 'Working Remote' ? 'bg-purple-100 text-purple-700' :
+                                                locationStatus === 'Working Remote (Pending)' ? 'bg-yellow-100 text-yellow-700' :
+                                                    locationStatus === 'Out of Office' ? 'bg-red-100 text-red-700' :
+                                                        'bg-gray-100 text-gray-600'
+                                        }`}>
+                                        {locationStatus}
+                                    </span>
+                                    {workLocationName && (
+                                        <span className="text-xs text-gray-500 font-medium">
+                                            {workLocationName}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <p className="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8 max-w-md">
                                 {isPunchedIn

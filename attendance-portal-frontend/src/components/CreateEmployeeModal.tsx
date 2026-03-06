@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useFrappePostCall, useFrappeGetDocList } from 'frappe-react-sdk'
+import { useFrappePostCall, useFrappeGetDocList, useFrappeGetCall } from 'frappe-react-sdk'
 import toast from 'react-hot-toast'
 import Dropdown from './Dropdown'
+
+type Farm = { name: string; area_name: string; clusters: { name: string; area_name: string; fields: { name: string; area_name: string }[] }[] }
 
 interface CreateEmployeeModalProps {
     isOpen: boolean
@@ -22,12 +24,23 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         reports_to: '',
         company: '',
         offices: [] as string[],
+        allowed_farm_fields: [] as string[],
         holiday_list: '',
         roles: ['Employee'] // Default role - Employee is always required
     })
     const [loading, setLoading] = useState(false)
+    const [selectedFarm, setSelectedFarm] = useState<string>('')
+    const [selectedCluster, setSelectedCluster] = useState<string>('')
 
     const { call: createEmployee } = useFrappePostCall('attendance_portal.api.create_employee')
+    const { data: hierarchyData } = useFrappeGetCall<{ farms: Farm[] } | { message: { farms: Farm[] } }>('attendance_portal.api.get_geo_fencing_hierarchy', undefined, { revalidateOnFocus: false })
+
+    const hierarchy = (hierarchyData as any)?.message?.farms ?? (hierarchyData as any)?.farms ?? []
+    const selectedFarmObj = hierarchy.find(f => f.name === selectedFarm)
+    const clusters = selectedFarmObj?.clusters ?? []
+    const selectedClusterObj = clusters.find(c => c.name === selectedCluster)
+    const fieldsList = selectedClusterObj?.fields ?? []
+    const selectedFieldsInCluster = formData.allowed_farm_fields.filter(id => fieldsList.some(f => f.name === id))
 
     // Fetch lists for dropdowns
     const { data: designations } = useFrappeGetDocList('Designation', { fields: ['name'], limit: 100 })
@@ -41,15 +54,14 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         setLoading(true)
 
         try {
-            // Validate at least one office is selected
-            if (formData.offices.length === 0) {
-                toast.error('Please select at least one work location')
+            if (formData.offices.length === 0 && formData.allowed_farm_fields.length === 0) {
+                toast.error('Please select at least one work location (corporate office or farm field)')
                 return
             }
-            
             await createEmployee({
                 ...formData,
-                offices: formData.offices
+                offices: formData.offices,
+                allowed_farm_fields: formData.allowed_farm_fields
             })
             toast.success('Employee created successfully!')
             onSuccess()
@@ -67,9 +79,12 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                 reports_to: '',
                 company: '',
                 offices: [],
+                allowed_farm_fields: [],
                 holiday_list: '',
                 roles: ['Employee']
             })
+            setSelectedFarm('')
+            setSelectedCluster('')
         } catch (error: any) {
             toast.error(error.message || 'Failed to create employee')
             console.error(error)
@@ -168,7 +183,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                         />
                         <div className="md:col-span-2">
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                                Work Locations <span className="text-red-500">*</span>
+                                Corporate offices
                                 <span className="text-xs text-gray-500 font-normal ml-2">(Select one or more)</span>
                             </label>
                             <div className="space-y-2 p-3 sm:p-4 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
@@ -195,9 +210,6 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                     </label>
                                 ))}
                             </div>
-                            {formData.offices.length === 0 && (
-                                <p className="text-xs text-red-500 mt-1">Please select at least one work location</p>
-                            )}
                             {formData.offices.length > 0 && (
                                 <p className="text-xs text-gray-500 mt-1">
                                     Selected: {formData.offices.map(officeId => {
@@ -205,6 +217,88 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                         return office?.office_name || officeId
                                     }).join(', ')}
                                 </p>
+                            )}
+                        </div>
+
+                        <div className="md:col-span-2 space-y-3">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Farm land</label>
+                            {hierarchy.length === 0 ? (
+                                <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600">
+                                    No farm land data available. To assign geo-fenced fields to employees, ensure the F2C (Farm to Crop) app is installed and Geo Fencing Areas with types Farm, Cluster, and Field are created in the system.
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <Dropdown
+                                            label="Farm"
+                                            options={hierarchy.map(f => ({ value: f.name, label: f.area_name || f.name }))}
+                                            value={selectedFarm}
+                                            onChange={v => { setSelectedFarm(v); setSelectedCluster('') }}
+                                            placeholder="Select farm first"
+                                        />
+                                        <Dropdown
+                                            label="Cluster"
+                                            options={clusters.map(c => ({ value: c.name, label: c.area_name || c.name }))}
+                                            value={selectedCluster}
+                                            onChange={v => setSelectedCluster(v)}
+                                            placeholder={selectedFarm ? 'Select cluster' : 'Select farm first'}
+                                        />
+                                    </div>
+                                    {fieldsList.length > 0 && (
+                                        <div className="pt-2">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs sm:text-sm text-gray-600">Fields</span>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({
+                                                            ...prev,
+                                                            allowed_farm_fields: [...new Set([...prev.allowed_farm_fields, ...fieldsList.map(f => f.name)])]
+                                                        }))}
+                                                        className="text-xs font-medium text-blue-600 hover:underline"
+                                                    >
+                                                        Select all
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({
+                                                            ...prev,
+                                                            allowed_farm_fields: prev.allowed_farm_fields.filter(id => !fieldsList.some(ff => ff.name === id))
+                                                        }))}
+                                                        className="text-xs font-medium text-gray-500 hover:underline"
+                                                    >
+                                                        Clear all
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-40 overflow-y-auto">
+                                                {fieldsList.map(f => (
+                                                    <label key={f.name} className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-2 rounded">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedFieldsInCluster.includes(f.name)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setFormData(prev => ({ ...prev, allowed_farm_fields: [...prev.allowed_farm_fields, f.name] }))
+                                                                } else {
+                                                                    setFormData(prev => ({ ...prev, allowed_farm_fields: prev.allowed_farm_fields.filter(id => id !== f.name) }))
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                        />
+                                                        <span className="text-sm text-gray-800">{f.area_name || f.name}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            {formData.allowed_farm_fields.length > 0 && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Total farm fields selected: {formData.allowed_farm_fields.length}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-gray-500">Select farm and cluster, then choose fields where this employee can mark attendance.</p>
+                                </>
                             )}
                         </div>
 

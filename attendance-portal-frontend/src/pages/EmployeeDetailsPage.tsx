@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useFrappeGetDoc, useFrappePostCall } from 'frappe-react-sdk'
+import { useFrappeGetDoc, useFrappeGetCall, useFrappePostCall } from 'frappe-react-sdk'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns'
 import EditEmployeeModal from '../components/EditEmployeeModal'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +19,30 @@ export default function EmployeeDetailsPage() {
     const { data: employee, mutate: mutateEmployee } = useFrappeGetDoc('Employee', id!)
     const { call: getStats } = useFrappePostCall('attendance_portal.api.get_employee_stats')
     const { call: getBalances } = useFrappePostCall('attendance_portal.api.get_leave_balances')
+    const { data: officesData } = useFrappeGetCall('attendance_portal.api.get_office_locations', undefined, { revalidateOnFocus: false })
+    const { data: hierarchyData } = useFrappeGetCall('attendance_portal.api.get_geo_fencing_hierarchy', undefined, { revalidateOnFocus: false })
+
+    const officeDisplayNames = useMemo(() => {
+        const raw = (officesData as any)?.message ?? officesData
+        const list = Array.isArray(raw) ? raw : []
+        const map: Record<string, string> = {}
+        list.forEach((o: any) => { if (o?.name) map[o.name] = o.office_name || o.name })
+        return map
+    }, [officesData])
+
+    const geoAreaDisplayNames = useMemo(() => {
+        const raw = (hierarchyData as any)?.message ?? hierarchyData
+        const farms = raw?.farms ?? []
+        const map: Record<string, string> = {}
+        farms.forEach((farm: any) => {
+            (farm.clusters ?? []).forEach((cluster: any) => {
+                (cluster.fields ?? []).forEach((f: any) => {
+                    if (f?.name) map[f.name] = f.area_name || f.name
+                })
+            })
+        })
+        return map
+    }, [hierarchyData])
 
     const fetchStats = async () => {
         if (!id) return
@@ -115,9 +139,25 @@ export default function EmployeeDetailsPage() {
                             <span className="material-symbols-rounded text-gray-400">calendar_month</span>
                             Joined: {employee.date_of_joining ? format(new Date(employee.date_of_joining), 'MMM dd, yyyy') : 'N/A'}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <span className="material-symbols-rounded text-gray-400">location_on</span>
-                            {employee.allowed_locations?.[0]?.office || 'No work location assigned'}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                            {(employee.allowed_locations?.length ?? 0) > 0 && (
+                                <span className="flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-gray-400">location_on</span>
+                                    Corporate offices: {employee.allowed_locations.map((loc: any) => officeDisplayNames[loc.office] || loc.office).join(', ')}
+                                </span>
+                            )}
+                            {(employee.allowed_geo_areas?.length ?? 0) > 0 && (
+                                <span className="flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-gray-400">grass</span>
+                                    Farm land (fields): {employee.allowed_geo_areas.map((row: any) => geoAreaDisplayNames[row.geo_fencing_area] || row.geo_fencing_area).join(', ')}
+                                </span>
+                            )}
+                            {!(employee.allowed_locations?.length) && !(employee.allowed_geo_areas?.length) && (
+                                <span className="flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-gray-400">location_on</span>
+                                    No work location assigned
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -297,7 +337,16 @@ export default function EmployeeDetailsPage() {
                                 <DetailRow label="Location Type" value={selectedLog.location_type} />
                             )}
                             {selectedLog.office_location && (
-                                <DetailRow label="Office Location" value={selectedLog.office_location} />
+                                <DetailRow
+                                    label="Office Location"
+                                    value={officeDisplayNames[selectedLog.office_location] || selectedLog.office_location}
+                                />
+                            )}
+                            {selectedLog.geo_fencing_area && (
+                                <DetailRow
+                                    label="Farm field"
+                                    value={geoAreaDisplayNames[selectedLog.geo_fencing_area] || selectedLog.geo_fencing_area}
+                                />
                             )}
                             {selectedLog.is_regularized && selectedLog.regularization && (
                                 <div className="pt-2 border-t border-gray-100 space-y-2">
