@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useFrappeGetDocList, useFrappePostCall } from 'frappe-react-sdk'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import Dropdown from '../components/Dropdown'
 import { format } from 'date-fns'
 
 interface LeaveBalance {
@@ -19,6 +20,9 @@ interface LeaveApplication {
     description: string
     status: string
     total_leave_days: number
+    half_day?: number
+    half_day_date?: string | null
+    half_day_slot?: string | null
 }
 
 export default function LeavePage() {
@@ -26,6 +30,7 @@ export default function LeavePage() {
     const [leaveType, setLeaveType] = useState('')
     const [fromDate, setFromDate] = useState('')
     const [toDate, setToDate] = useState('')
+    const [halfDaySlot, setHalfDaySlot] = useState<'First Half' | 'Second Half' | ''>('')
     const [reason, setReason] = useState('')
     const [loading, setLoading] = useState(false)
     const [balances, setBalances] = useState<LeaveBalance[]>([])
@@ -42,7 +47,7 @@ export default function LeavePage() {
 
     const { data: applications, mutate: mutateApplications } = useFrappeGetDocList<LeaveApplication>('Leave Application', {
         filters: [['employee', '=', employeeId]],
-        fields: ['name', 'leave_type', 'from_date', 'to_date', 'description', 'status', 'total_leave_days'],
+        fields: ['name', 'leave_type', 'from_date', 'to_date', 'description', 'status', 'total_leave_days', 'half_day', 'half_day_date', 'half_day_slot'],
         orderBy: {
             field: 'creation',
             order: 'desc'
@@ -80,8 +85,14 @@ export default function LeavePage() {
         }
     }
 
+    const isHalfDayType = leaveType === 'Half Day'
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (isHalfDayType && !halfDaySlot) {
+            toast.error('Please select First Half or Second Half for Half Day leave.')
+            return
+        }
         setLoading(true)
 
         try {
@@ -89,13 +100,15 @@ export default function LeavePage() {
                 employee: employeeId,
                 leave_type: leaveType,
                 from_date: fromDate,
-                to_date: toDate,
-                reason
+                to_date: isHalfDayType ? fromDate : toDate,
+                reason,
+                ...(isHalfDayType && { half_day_slot: halfDaySlot })
             })
 
             toast.success('Leave application submitted!')
             setFromDate('')
             setToDate('')
+            setHalfDaySlot('')
             setReason('')
             mutateApplications()
             fetchBalances() // Update balances (though they might not change until approved)
@@ -120,6 +133,7 @@ export default function LeavePage() {
                         if (balance.leave_type === 'Casual Leave') borderColor = 'border-green-500'
                         if (balance.leave_type === 'Sick Leave') borderColor = 'border-orange-500'
                         if (balance.leave_type === 'Compensatory Leave') borderColor = 'border-purple-500'
+                        if (balance.leave_type === 'Half Day') borderColor = 'border-amber-500'
 
                         return (
                             <div key={balance.leave_type} className={`bg-white rounded-2xl shadow-md p-4 sm:p-6 border-l-4 ${borderColor}`}>
@@ -159,23 +173,14 @@ export default function LeavePage() {
                         <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-gray-800">Apply for Leave</h2>
 
                         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                            <div>
-                                <label htmlFor="leaveType" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                                    Leave Type
-                                </label>
-                                <select
-                                    id="leaveType"
-                                    value={leaveType}
-                                    onChange={(e) => setLeaveType(e.target.value)}
-                                    required
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white"
-                                >
-                                    <option value="">Select Leave Type</option>
-                                    {leaveTypes?.map(lt => (
-                                        <option key={lt.name} value={lt.name}>{lt.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            <Dropdown
+                                label="Leave Type"
+                                options={(leaveTypes ?? []).map(lt => ({ value: lt.name, label: lt.name }))}
+                                value={leaveType}
+                                onChange={setLeaveType}
+                                placeholder="Select Leave Type"
+                                required
+                            />
 
                             <div>
                                 <label htmlFor="fromDate" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
@@ -191,20 +196,53 @@ export default function LeavePage() {
                                 />
                             </div>
 
-                            <div>
-                                <label htmlFor="toDate" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                                    To Date
-                                </label>
-                                <input
-                                    id="toDate"
-                                    type="date"
-                                    value={toDate}
-                                    onChange={(e) => setToDate(e.target.value)}
-                                    required
-                                    min={fromDate}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                                />
-                            </div>
+                            {!isHalfDayType && (
+                                <div>
+                                    <label htmlFor="toDate" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                                        To Date
+                                    </label>
+                                    <input
+                                        id="toDate"
+                                        type="date"
+                                        value={toDate}
+                                        onChange={(e) => setToDate(e.target.value)}
+                                        required
+                                        min={fromDate}
+                                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                    />
+                                </div>
+                            )}
+                            {isHalfDayType && (
+                                <div>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                                        Half day slot
+                                    </label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="halfDaySlot"
+                                                value="First Half"
+                                                checked={halfDaySlot === 'First Half'}
+                                                onChange={() => setHalfDaySlot('First Half')}
+                                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">First half</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="halfDaySlot"
+                                                value="Second Half"
+                                                checked={halfDaySlot === 'Second Half'}
+                                                onChange={() => setHalfDaySlot('Second Half')}
+                                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Second half</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
 
                             <div>
                                 <label htmlFor="reason" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
@@ -246,7 +284,9 @@ export default function LeavePage() {
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <span className="text-sm sm:text-base font-semibold text-gray-800">{app.leave_type}</span>
                                                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">
-                                                        {app.total_leave_days} day{app.total_leave_days !== 1 ? 's' : ''}
+                                                        {app.total_leave_days === 0.5 || app.half_day
+                                                            ? `½ day${app.half_day_slot ? ` (${app.half_day_slot})` : ''}`
+                                                            : `${app.total_leave_days} day${app.total_leave_days !== 1 ? 's' : ''}`}
                                                     </span>
                                                 </div>
                                                 <p className="text-xs sm:text-sm text-gray-600 mt-1">

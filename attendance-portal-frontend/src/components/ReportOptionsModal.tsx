@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useFrappeGetDocList } from 'frappe-react-sdk'
+import Dropdown from './Dropdown'
 
 interface ReportOptionsModalProps {
     isOpen: boolean
@@ -224,19 +225,16 @@ export default function ReportOptionsModal({ isOpen, onClose, onDownload, isDown
                         </div>
 
                         {employeeSelection === 'single' && (
-                            <select
+                            <Dropdown
+                                options={activeEmployees.map(emp => ({
+                                    value: emp.name,
+                                    label: `${emp.employee_name ?? emp.name} (${emp.name})`,
+                                }))}
                                 value={selectedSingleEmployee}
-                                onChange={(e) => setSelectedSingleEmployee(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                onChange={setSelectedSingleEmployee}
+                                placeholder="Select Employee"
                                 required
-                            >
-                                <option value="">Select Employee</option>
-                                {activeEmployees.map(emp => (
-                                    <option key={emp.name} value={emp.name}>
-                                        {emp.employee_name} ({emp.name})
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         )}
 
                         {employeeSelection === 'multiple' && (

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFrappePostCall, useFrappeGetDocList } from 'frappe-react-sdk'
 import toast from 'react-hot-toast'
+import Dropdown from './Dropdown'
 
 interface CreateEmployeeModalProps {
     isOpen: boolean
@@ -42,7 +43,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         try {
             // Validate at least one office is selected
             if (formData.offices.length === 0) {
-                toast.error('Please select at least one office location')
+                toast.error('Please select at least one work location')
                 return
             }
             
@@ -134,20 +135,18 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Gender <span className="text-red-500">*</span></label>
-                            <select
-                                required
-                                value={formData.gender}
-                                onChange={e => setFormData({ ...formData, gender: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Select Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
+                        <Dropdown
+                            label="Gender"
+                            options={[
+                                { value: 'Male', label: 'Male' },
+                                { value: 'Female', label: 'Female' },
+                                { value: 'Other', label: 'Other' },
+                            ]}
+                            value={formData.gender}
+                            onChange={v => setFormData(prev => ({ ...prev, gender: v }))}
+                            placeholder="Select Gender"
+                            required
+                        />
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date of Birth <span className="text-red-500">*</span></label>
                             <input
@@ -159,23 +158,17 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Company <span className="text-red-500">*</span></label>
-                            <select
-                                required
-                                value={formData.company}
-                                onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Select Company</option>
-                                {companies?.map(c => (
-                                    <option key={c.name} value={c.name}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <Dropdown
+                            label="Company"
+                            options={(companies ?? []).map(c => ({ value: c.name, label: c.name }))}
+                            value={formData.company}
+                            onChange={v => setFormData(prev => ({ ...prev, company: v }))}
+                            placeholder="Select Company"
+                            required
+                        />
                         <div className="md:col-span-2">
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                                Office Locations <span className="text-red-500">*</span>
+                                Work Locations <span className="text-red-500">*</span>
                                 <span className="text-xs text-gray-500 font-normal ml-2">(Select one or more)</span>
                             </label>
                             <div className="space-y-2 p-3 sm:p-4 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
@@ -203,7 +196,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                 ))}
                             </div>
                             {formData.offices.length === 0 && (
-                                <p className="text-xs text-red-500 mt-1">Please select at least one office location</p>
+                                <p className="text-xs text-red-500 mt-1">Please select at least one work location</p>
                             )}
                             {formData.offices.length > 0 && (
                                 <p className="text-xs text-gray-500 mt-1">
@@ -215,19 +208,14 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                             )}
                         </div>
 
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Designation</label>
-                            <select
-                                value={formData.designation}
-                                onChange={e => setFormData({ ...formData, designation: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Select Designation</option>
-                                {designations?.map(d => (
-                                    <option key={d.name} value={d.name}>{d.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <Dropdown
+                            label="Designation"
+                            options={(designations ?? []).map(d => ({ value: d.name, label: d.name }))}
+                            value={formData.designation}
+                            onChange={v => setFormData(prev => ({ ...prev, designation: v }))}
+                            placeholder="Select Designation"
+                            searchable
+                        />
 
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date of Joining <span className="text-red-500">*</span></label>
@@ -239,33 +227,29 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                         </div>
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Reports To <span className="text-red-500">*</span></label>
-                            <select
-                                required
-                                value={formData.reports_to}
-                                onChange={e => setFormData({ ...formData, reports_to: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Select Manager</option>
-                                {employees?.map(e => (
-                                    <option key={e.name} value={e.name}>{e.employee_name} ({e.name})</option>
-                                ))}
-                            </select>
-                        </div>
+                        <Dropdown
+                            label="Reports To"
+                            options={(employees ?? []).map(e => ({
+                                value: e.name,
+                                label: `${(e as { employee_name?: string }).employee_name ?? e.name} (${e.name})`,
+                            }))}
+                            value={formData.reports_to}
+                            onChange={v => setFormData(prev => ({ ...prev, reports_to: v }))}
+                            placeholder="Select Manager"
+                            required
+                        />
 
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Holiday List</label>
-                            <select
+                            <Dropdown
+                                label="Holiday List"
+                                options={(holidayLists ?? []).map(hl => ({
+                                    value: hl.name,
+                                    label: (hl as { holiday_list_name?: string }).holiday_list_name || hl.name,
+                                }))}
                                 value={formData.holiday_list}
-                                onChange={e => setFormData({ ...formData, holiday_list: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">Select Holiday List (Optional)</option>
-                                {holidayLists?.map(hl => (
-                                    <option key={hl.name} value={hl.name}>{hl.holiday_list_name || hl.name}</option>
-                                ))}
-                            </select>
+                                onChange={v => setFormData(prev => ({ ...prev, holiday_list: v }))}
+                                placeholder="Select Holiday List (Optional)"
+                            />
                             <p className="text-xs text-gray-500 mt-1">Select a holiday list for this employee (e.g., 5 Day Week or 6 Day Week)</p>
                         </div>
 

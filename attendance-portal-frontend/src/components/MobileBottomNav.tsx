@@ -31,7 +31,7 @@ export default function MobileBottomNav() {
     // Additional items for HR Admin (shown in menu)
     const hrAdminMenuItems = [
         { path: '/approvals', label: 'Approvals', icon: 'shield' },
-        { path: '/office-locations', label: 'Locations', icon: 'location_on' },
+        { path: '/office-locations', label: 'Work Locations', icon: 'location_on' },
         { path: '/employees', label: 'Employees', icon: 'group' },
     ]
 

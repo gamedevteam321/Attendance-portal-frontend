@@ -20,7 +20,7 @@ export default function DashboardLayout() {
             case '/regularization': return 'Attendance'
             case '/profile': return 'Profile'
             case '/approvals': return 'Approvals'
-            case '/office-locations': return 'Office Locations'
+            case '/office-locations': return 'Work Locations'
             case '/employees': return 'Employees'
             default: return 'Dashboard'
         }

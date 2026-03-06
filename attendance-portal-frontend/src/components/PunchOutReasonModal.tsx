@@ -26,7 +26,7 @@ export default function PunchOutReasonModal({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!reason.trim()) {
-            alert('Please provide a reason for punching out outside office')
+            alert('Please provide a reason for punching out outside work location')
             return
         }
         if (!location) {
@@ -42,7 +42,7 @@ export default function PunchOutReasonModal({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
                 <div className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">Punch Out Outside Office</h2>
+                    <h2 className="text-xl font-semibold mb-4">Punch Out Outside Work Location</h2>
                     
                     <form onSubmit={handleSubmit}>
                         <div className="mb-4">
@@ -54,7 +54,7 @@ export default function PunchOutReasonModal({
                                 onChange={(e) => setReason(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 rows={4}
-                                placeholder="Please provide a reason for punching out outside the office location..."
+                                placeholder="Please provide a reason for punching out outside the work location..."
                                 required
                                 disabled={isSubmitting}
                             />

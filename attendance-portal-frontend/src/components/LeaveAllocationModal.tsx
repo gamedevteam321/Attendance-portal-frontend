@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useFrappePostCall, useFrappeGetDocList } from 'frappe-react-sdk'
 import toast from 'react-hot-toast'
+import Dropdown from './Dropdown'
 
 interface LeaveAllocationModalProps {
     isOpen: boolean
@@ -80,22 +81,14 @@ export default function LeaveAllocationModal({ isOpen, onClose, onSuccess, emplo
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Leave Type <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            value={formData.leave_type}
-                            onChange={(e) => setFormData({ ...formData, leave_type: e.target.value })}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                        >
-                            <option value="">Select Leave Type</option>
-                            {leaveTypes?.map(lt => (
-                                <option key={lt.name} value={lt.name}>{lt.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <Dropdown
+                        label="Leave Type"
+                        options={(leaveTypes ?? []).map(lt => ({ value: lt.name, label: lt.name }))}
+                        value={formData.leave_type}
+                        onChange={v => setFormData(prev => ({ ...prev, leave_type: v }))}
+                        placeholder="Select Leave Type"
+                        required
+                    />
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>

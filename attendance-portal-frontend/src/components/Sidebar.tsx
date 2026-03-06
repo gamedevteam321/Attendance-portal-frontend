@@ -44,7 +44,7 @@ export default function Sidebar() {
     }
 
     if (isHrAdmin) {
-        navItems.push({ path: '/office-locations', label: 'Office Locations', icon: 'location_on' })
+        navItems.push({ path: '/office-locations', label: 'Work Locations', icon: 'location_on' })
         navItems.push({ path: '/employees', label: 'Employees', icon: 'group' })
     }
 

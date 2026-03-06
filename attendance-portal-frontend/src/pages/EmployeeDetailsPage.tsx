@@ -14,6 +14,7 @@ export default function EmployeeDetailsPage() {
     const [stats, setStats] = useState<any>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [leaveBalances, setLeaveBalances] = useState<any[]>([])
+    const [selectedLog, setSelectedLog] = useState<any | null>(null)
 
     const { data: employee, mutate: mutateEmployee } = useFrappeGetDoc('Employee', id!)
     const { call: getStats } = useFrappePostCall('attendance_portal.api.get_employee_stats')
@@ -116,7 +117,7 @@ export default function EmployeeDetailsPage() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                             <span className="material-symbols-rounded text-gray-400">location_on</span>
-                            {employee.allowed_locations?.[0]?.office || 'No Office Assigned'}
+                            {employee.allowed_locations?.[0]?.office || 'No work location assigned'}
                         </div>
                     </div>
                 </div>
@@ -153,11 +154,6 @@ export default function EmployeeDetailsPage() {
                                 </div>
                             )
                         })}
-                    </div>
-                    <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
-                        <p className="text-xs text-blue-800">
-                            <strong>Note:</strong> Leaves are automatically allocated monthly (1 Casual + 1 Sick per month)
-                        </p>
                     </div>
                 </div>
             )}
@@ -206,7 +202,11 @@ export default function EmployeeDetailsPage() {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {stats?.logs?.map((log: any) => (
-                                <tr key={log.attendance_date} className="hover:bg-gray-50 transition">
+                                <tr
+                                    key={log.attendance_date}
+                                    onClick={() => setSelectedLog(log)}
+                                    className="hover:bg-gray-50 transition cursor-pointer"
+                                >
                                     <td className="px-6 py-4 text-sm text-gray-800 font-medium">
                                         {format(new Date(log.attendance_date), 'MMM dd, yyyy')}
                                     </td>
@@ -244,6 +244,102 @@ export default function EmployeeDetailsPage() {
                 </div>
             </div>
 
+            {/* Attendance Log Detail Modal */}
+            {selectedLog && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setSelectedLog(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="text-lg font-bold text-gray-800">
+                                Attendance – {format(new Date(selectedLog.attendance_date), 'EEEE, MMM dd, yyyy')}
+                            </h3>
+                            <button
+                                onClick={() => setSelectedLog(null)}
+                                className="text-gray-400 hover:text-gray-600 transition p-1"
+                            >
+                                <span className="material-symbols-rounded text-xl">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <DetailRow label="Date" value={format(new Date(selectedLog.attendance_date), 'MMMM dd, yyyy')} />
+                            <DetailRow
+                                label="Check In"
+                                value={selectedLog.check_in ? format(new Date(selectedLog.check_in), 'hh:mm a') : '–'}
+                            />
+                            <DetailRow
+                                label="Check Out"
+                                value={selectedLog.check_out ? format(new Date(selectedLog.check_out), 'hh:mm a') : '–'}
+                            />
+                            <DetailRow
+                                label="Working Hours"
+                                value={selectedLog.working_hours != null ? `${Number(selectedLog.working_hours).toFixed(2)} hrs` : '–'}
+                            />
+                            <DetailRow
+                                label="Status"
+                                value={
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        selectedLog.status === 'Present' ? 'bg-green-100 text-green-700' :
+                                        selectedLog.status === 'Absent' ? 'bg-red-100 text-red-700' :
+                                        selectedLog.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
+                                        selectedLog.status === 'Half Day' ? 'bg-orange-100 text-orange-700' :
+                                        'bg-gray-100 text-gray-600'
+                                    }`}>
+                                        {selectedLog.status}
+                                    </span>
+                                }
+                            />
+                            {selectedLog.location_type && (
+                                <DetailRow label="Location Type" value={selectedLog.location_type} />
+                            )}
+                            {selectedLog.office_location && (
+                                <DetailRow label="Office Location" value={selectedLog.office_location} />
+                            )}
+                            {selectedLog.is_regularized && selectedLog.regularization && (
+                                <div className="pt-2 border-t border-gray-100 space-y-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Record type</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Regularized</span>
+                                    </div>
+                                    {selectedLog.regularization.reason && (
+                                        <p className="text-sm text-gray-700"><span className="font-medium text-gray-500">Reason:</span> {selectedLog.regularization.reason}</p>
+                                    )}
+                                </div>
+                            )}
+                            {(selectedLog.punch_out_request || selectedLog.location_type === 'Outside Office') && (
+                                <div className="pt-2 border-t border-gray-100 space-y-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Punch out</p>
+                                    <p className="text-sm text-gray-700 font-medium">Punch out of office</p>
+                                    {selectedLog.punch_out_request && (
+                                        <>
+                                            <p className="text-sm text-gray-700">
+                                                <span className="font-medium text-gray-500">Approval:</span>{' '}
+                                                <span className={selectedLog.punch_out_request.status === 'Approved' ? 'text-green-600' : selectedLog.punch_out_request.status === 'Rejected' ? 'text-red-600' : 'text-yellow-600'}>
+                                                    {selectedLog.punch_out_request.status}
+                                                </span>
+                                            </p>
+                                            {selectedLog.punch_out_request.reason && (
+                                                <p className="text-sm text-gray-700"><span className="font-medium text-gray-500">Reason:</span> {selectedLog.punch_out_request.reason}</p>
+                                            )}
+                                            {(selectedLog.punch_out_request.latitude != null || selectedLog.punch_out_request.longitude != null) && (
+                                                <p className="text-sm text-gray-700">
+                                                    <span className="font-medium text-gray-500">Location:</span>{' '}
+                                                    {[selectedLog.punch_out_request.latitude, selectedLog.punch_out_request.longitude].filter(Boolean).map(Number).map(n => n.toFixed(5)).join(', ')}
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {id && (
                 <EditEmployeeModal
                     isOpen={isEditModalOpen}
@@ -270,6 +366,15 @@ function StatCard({ title, value, icon, color }: { title: string, value: string 
                 <p className="text-sm text-gray-500 font-medium">{title}</p>
                 <p className="text-xl font-bold text-gray-800">{value}</p>
             </div>
+        </div>
+    )
+}
+
+function DetailRow({ label, value }: { label: string, value: React.ReactNode }) {
+    return (
+        <div className="flex justify-between items-center gap-4">
+            <span className="text-sm font-medium text-gray-500">{label}</span>
+            <span className="text-sm text-gray-800">{value}</span>
         </div>
     )
 }

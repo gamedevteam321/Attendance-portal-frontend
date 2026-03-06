@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFrappeGetDocList, useFrappePostCall } from 'frappe-react-sdk'
 import { Link } from 'react-router-dom'
 import CreateEmployeeModal from '../components/CreateEmployeeModal'
@@ -20,6 +20,10 @@ export default function EmployeeManagementPage() {
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const [isDownloading, setIsDownloading] = useState(false)
+    const [monthlyCasual, setMonthlyCasual] = useState('1')
+    const [monthlySick, setMonthlySick] = useState('1')
+    const [leaveSettingsLoading, setLeaveSettingsLoading] = useState(false)
+    const [leaveSettingsSaving, setLeaveSettingsSaving] = useState(false)
     const { isHrAdmin } = useAuth()
 
     const { data: employees, mutate } = useFrappeGetDocList<Employee>('Employee', {
@@ -28,6 +32,40 @@ export default function EmployeeManagementPage() {
     })
 
     const { call: getAttendanceReport } = useFrappePostCall('attendance_portal.api.get_attendance_report_for_csv')
+    const { call: getLeaveSettings } = useFrappePostCall('attendance_portal.api.get_leave_settings')
+    const { call: setLeaveSettings } = useFrappePostCall('attendance_portal.api.set_leave_settings')
+
+    useEffect(() => {
+        if (!isHrAdmin) return
+        setLeaveSettingsLoading(true)
+        getLeaveSettings({})
+            .then((res: any) => {
+                const data = res?.message ?? res
+                if (data && typeof data.monthly_casual_leaves === 'number') setMonthlyCasual(String(data.monthly_casual_leaves))
+                if (data && typeof data.monthly_sick_leaves === 'number') setMonthlySick(String(data.monthly_sick_leaves))
+            })
+            .catch(() => {})
+            .finally(() => setLeaveSettingsLoading(false))
+    }, [isHrAdmin])
+
+    const handleSaveLeaveSettings = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const casual = parseFloat(monthlyCasual)
+        const sick = parseFloat(monthlySick)
+        if (Number.isNaN(casual) || casual < 0 || Number.isNaN(sick) || sick < 0) {
+            toast.error('Enter valid numbers (0 or more) for both fields')
+            return
+        }
+        setLeaveSettingsSaving(true)
+        try {
+            await setLeaveSettings({ monthly_casual_leaves: casual, monthly_sick_leaves: sick })
+            toast.success('Leave settings saved. Used when leaves are auto-allocated each month.')
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to save settings')
+        } finally {
+            setLeaveSettingsSaving(false)
+        }
+    }
 
     const downloadAttendanceReport = async (options: {
         from_date: string
@@ -150,15 +188,17 @@ export default function EmployeeManagementPage() {
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Employee Management</h1>
                     <p className="text-sm sm:text-base text-gray-500 mt-1">Manage your workforce and view performance</p>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     {isHrAdmin && (
-                        <button
-                            onClick={() => setIsReportModalOpen(true)}
-                            className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold hover:bg-green-700 transition shadow-lg shadow-green-200 w-full sm:w-auto text-sm sm:text-base"
-                        >
-                            <span className="material-symbols-rounded text-lg sm:text-xl">download</span>
-                            <span>Reports</span>
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setIsReportModalOpen(true)}
+                                className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold hover:bg-green-700 transition shadow-lg shadow-green-200 w-full sm:w-auto text-sm sm:text-base"
+                            >
+                                <span className="material-symbols-rounded text-lg sm:text-xl">download</span>
+                                <span>Reports</span>
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={() => setIsModalOpen(true)}
@@ -169,6 +209,55 @@ export default function EmployeeManagementPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Leave settings - HR Admin only */}
+            {isHrAdmin && (
+                <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 sm:mb-6">
+                    <h2 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                        <span className="material-symbols-rounded text-lg text-blue-600">event_available</span>
+                        Monthly leave allocation
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-4">Leaves auto-added to each active employee on the 1st of every month. Values can be decimals (e.g. 1.5).</p>
+                    {leaveSettingsLoading ? (
+                        <div className="flex items-center gap-2 text-gray-500 text-sm">
+                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            Loading…
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSaveLeaveSettings} className="flex flex-wrap items-end gap-4">
+                            <div className="min-w-[140px]">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Casual (per month)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.25"
+                                    value={monthlyCasual}
+                                    onChange={e => setMonthlyCasual(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                />
+                            </div>
+                            <div className="min-w-[140px]">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Sick (per month)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.25"
+                                    value={monthlySick}
+                                    onChange={e => setMonthlySick(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={leaveSettingsSaving}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition text-sm"
+                            >
+                                {leaveSettingsSaving ? 'Saving…' : 'Save'}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            )}
 
             {/* Search and Filter */}
             <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 sm:mb-6">
