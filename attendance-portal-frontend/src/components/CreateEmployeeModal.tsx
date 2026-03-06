@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useFrappePostCall, useFrappeGetDocList, useFrappeGetCall } from 'frappe-react-sdk'
 import toast from 'react-hot-toast'
 import Dropdown from './Dropdown'
 
 type Farm = { name: string; area_name: string; clusters: { name: string; area_name: string; fields: { name: string; area_name: string }[] }[] }
+type Cluster = Farm['clusters'][number]
+type FieldItem = { name: string; area_name: string }
 
 interface CreateEmployeeModalProps {
     isOpen: boolean
@@ -35,12 +37,12 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
     const { call: createEmployee } = useFrappePostCall('attendance_portal.api.create_employee')
     const { data: hierarchyData } = useFrappeGetCall<{ farms: Farm[] } | { message: { farms: Farm[] } }>('attendance_portal.api.get_geo_fencing_hierarchy', undefined, { revalidateOnFocus: false })
 
-    const hierarchy = (hierarchyData as any)?.message?.farms ?? (hierarchyData as any)?.farms ?? []
-    const selectedFarmObj = hierarchy.find(f => f.name === selectedFarm)
+    const hierarchy: Farm[] = (hierarchyData as any)?.message?.farms ?? (hierarchyData as any)?.farms ?? []
+    const selectedFarmObj = hierarchy.find((f: Farm) => f.name === selectedFarm)
     const clusters = selectedFarmObj?.clusters ?? []
-    const selectedClusterObj = clusters.find(c => c.name === selectedCluster)
-    const fieldsList = selectedClusterObj?.fields ?? []
-    const selectedFieldsInCluster = formData.allowed_farm_fields.filter(id => fieldsList.some(f => f.name === id))
+    const selectedClusterObj = clusters.find((c: Cluster) => c.name === selectedCluster)
+    const fieldsList: FieldItem[] = selectedClusterObj?.fields ?? []
+    const selectedFieldsInCluster = formData.allowed_farm_fields.filter(id => fieldsList.some((f: FieldItem) => f.name === id))
 
     // Fetch lists for dropdowns
     const { data: designations } = useFrappeGetDocList('Designation', { fields: ['name'], limit: 100 })
@@ -231,14 +233,14 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <Dropdown
                                             label="Farm"
-                                            options={hierarchy.map(f => ({ value: f.name, label: f.area_name || f.name }))}
+                                            options={hierarchy.map((f: Farm) => ({ value: f.name, label: f.area_name || f.name }))}
                                             value={selectedFarm}
                                             onChange={v => { setSelectedFarm(v); setSelectedCluster('') }}
                                             placeholder="Select farm first"
                                         />
                                         <Dropdown
                                             label="Cluster"
-                                            options={clusters.map(c => ({ value: c.name, label: c.area_name || c.name }))}
+                                            options={clusters.map((c: Cluster) => ({ value: c.name, label: c.area_name || c.name }))}
                                             value={selectedCluster}
                                             onChange={v => setSelectedCluster(v)}
                                             placeholder={selectedFarm ? 'Select cluster' : 'Select farm first'}
@@ -253,7 +255,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                                         type="button"
                                                         onClick={() => setFormData(prev => ({
                                                             ...prev,
-                                                            allowed_farm_fields: [...new Set([...prev.allowed_farm_fields, ...fieldsList.map(f => f.name)])]
+                                                            allowed_farm_fields: [...new Set([...prev.allowed_farm_fields, ...fieldsList.map((f: FieldItem) => f.name)])]
                                                         }))}
                                                         className="text-xs font-medium text-blue-600 hover:underline"
                                                     >
@@ -263,7 +265,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                                         type="button"
                                                         onClick={() => setFormData(prev => ({
                                                             ...prev,
-                                                            allowed_farm_fields: prev.allowed_farm_fields.filter(id => !fieldsList.some(ff => ff.name === id))
+                                                            allowed_farm_fields: prev.allowed_farm_fields.filter(id => !fieldsList.some((ff: FieldItem) => ff.name === id))
                                                         }))}
                                                         className="text-xs font-medium text-gray-500 hover:underline"
                                                     >
@@ -272,7 +274,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                                                 </div>
                                             </div>
                                             <div className="space-y-1 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-40 overflow-y-auto">
-                                                {fieldsList.map(f => (
+                                                {fieldsList.map((f: FieldItem) => (
                                                     <label key={f.name} className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-2 rounded">
                                                         <input
                                                             type="checkbox"

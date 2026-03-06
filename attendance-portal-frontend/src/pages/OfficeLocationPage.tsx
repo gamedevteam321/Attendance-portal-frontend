@@ -30,8 +30,8 @@ interface OfficeLocation {
 function WorkLocationMapSection({
     apiKey,
     formData,
-    setFormData,
-    editingLocation,
+    setFormData: _setFormData,
+    editingLocation: _editingLocation,
     currentLocation,
     centerOnCurrentLocation,
     onMapLoad,
@@ -65,9 +65,9 @@ function WorkLocationMapSection({
         const container = placeAutocompleteContainerRef.current
         let cancelled = false
         ;(async () => {
-            const lib = (await google.maps.importLibrary('places')) as google.maps.PlacesLibrary
+            const lib = await google.maps.importLibrary('places')
             if (cancelled) return
-            const placeEl = new lib.PlaceAutocompleteElement({})
+            const placeEl = new (lib as unknown as { PlaceAutocompleteElement: new (opts?: object) => HTMLElement }).PlaceAutocompleteElement({})
             placeAutocompleteElRef.current = placeEl as unknown as HTMLElement
             placeEl.addEventListener('gmp-select', async (ev: unknown) => {
                 const e = ev as { placePrediction: { toPlace: () => Promise<google.maps.places.Place> } }
