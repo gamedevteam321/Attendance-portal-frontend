@@ -22,8 +22,9 @@ export default function ProfilePage() {
     const [imageToCrop, setImageToCrop] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const { data: employee, mutate: refetchEmployee } = useFrappeGetDoc('Employee', employeeId || '', {
-        enabled: !!employeeId
+    const profileEmployeeSwrKey = employeeId ? `Employee:${employeeId}` : null
+    const { data: employee, mutate: refetchEmployee } = useFrappeGetDoc('Employee', employeeId || '', profileEmployeeSwrKey, {
+        revalidateOnFocus: false,
     })
 
     const { call: getBalances } = useFrappePostCall('attendance_portal.api.get_leave_balances')

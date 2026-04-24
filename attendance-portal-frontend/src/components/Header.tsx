@@ -9,8 +9,9 @@ import { getImageUrl } from '../utils/imageUtils'
 export default function Header({ title }: { title: string }) {
     const { toggleSidebar, isCollapsed } = useSidebar()
     const { employeeName, employeeId } = useAuth()
-    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', {
-        enabled: !!employeeId
+    const headerEmployeeSwrKey = employeeId ? `Employee:${employeeId}` : null
+    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', headerEmployeeSwrKey, {
+        revalidateOnFocus: false,
     })
     const [imageError, setImageError] = useState(false)
 

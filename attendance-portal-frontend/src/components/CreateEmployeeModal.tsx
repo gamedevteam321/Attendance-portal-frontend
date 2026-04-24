@@ -1,11 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFrappePostCall, useFrappeGetDocList, useFrappeGetCall } from 'frappe-react-sdk'
 import toast from 'react-hot-toast'
 import Dropdown from './Dropdown'
-
-type Farm = { name: string; area_name: string; clusters: { name: string; area_name: string; fields: { name: string; area_name: string }[] }[] }
-type Cluster = Farm['clusters'][number]
-type FieldItem = { name: string; area_name: string }
+import { type Farm, type Cluster, type FieldItem, farmDropdownOptions, findFarmInTree } from '../utils/geoFencingHierarchy'
+import { getFrappeErrorMessage } from '../utils/frappeErrorMessage'
 
 interface CreateEmployeeModalProps {
     isOpen: boolean
@@ -31,14 +29,28 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
         roles: ['Employee'] // Default role - Employee is always required
     })
     const [loading, setLoading] = useState(false)
+    const [submitError, setSubmitError] = useState('')
     const [selectedFarm, setSelectedFarm] = useState<string>('')
     const [selectedCluster, setSelectedCluster] = useState<string>('')
 
     const { call: createEmployee } = useFrappePostCall('attendance_portal.api.create_employee')
-    const { data: hierarchyData } = useFrappeGetCall<{ farms: Farm[] } | { message: { farms: Farm[] } }>('attendance_portal.api.get_geo_fencing_hierarchy', undefined, { revalidateOnFocus: false })
+    const geoHierarchySwrKey = isOpen ? 'attendance_portal.api.get_geo_fencing_hierarchy' : null
+
+    const {
+        data: hierarchyData,
+        isLoading: hierarchyLoading,
+        error: hierarchyError,
+        mutate: mutateHierarchy,
+    } = useFrappeGetCall<{ farms: Farm[] } | { message: { farms: Farm[] } }>(
+        'attendance_portal.api.get_geo_fencing_hierarchy',
+        undefined,
+        geoHierarchySwrKey,
+        { revalidateOnFocus: false, revalidateOnMount: true }
+    )
 
     const hierarchy: Farm[] = (hierarchyData as any)?.message?.farms ?? (hierarchyData as any)?.farms ?? []
-    const selectedFarmObj = hierarchy.find((f: Farm) => f.name === selectedFarm)
+    const hierarchyReady = !hierarchyLoading && !hierarchyError
+    const selectedFarmObj = selectedFarm ? findFarmInTree(hierarchy, selectedFarm) : undefined
     const clusters = selectedFarmObj?.clusters ?? []
     const selectedClusterObj = clusters.find((c: Cluster) => c.name === selectedCluster)
     const fieldsList: FieldItem[] = selectedClusterObj?.fields ?? []
@@ -51,8 +63,13 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
     const { data: offices } = useFrappeGetDocList('Office Location', { fields: ['name', 'office_name'] })
     const { data: holidayLists } = useFrappeGetDocList('Holiday List', { fields: ['name', 'holiday_list_name'] })
 
+    useEffect(() => {
+        if (isOpen) setSubmitError('')
+    }, [isOpen])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setSubmitError('')
         setLoading(true)
 
         try {
@@ -65,6 +82,7 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                 offices: formData.offices,
                 allowed_farm_fields: formData.allowed_farm_fields
             })
+            setSubmitError('')
             toast.success('Employee created successfully!')
             onSuccess()
             onClose()
@@ -87,8 +105,10 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
             })
             setSelectedFarm('')
             setSelectedCluster('')
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to create employee')
+        } catch (error: unknown) {
+            const msg = getFrappeErrorMessage(error, 'Failed to create employee')
+            setSubmitError(msg)
+            toast.error(msg)
             console.error(error)
         } finally {
             setLoading(false)
@@ -224,16 +244,34 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
 
                         <div className="md:col-span-2 space-y-3">
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Farm land</label>
-                            {hierarchy.length === 0 ? (
+                            {hierarchyError && (
+                                <div className="p-4 border border-red-200 rounded-lg bg-red-50 text-sm text-red-800 space-y-2">
+                                    <p>Could not load geo areas. Check your connection or try again.</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => mutateHierarchy()}
+                                        className="text-sm font-medium text-red-700 underline hover:no-underline"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            )}
+                            {!hierarchyError && hierarchyLoading && (
+                                <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600">
+                                    Loading farm areas…
+                                </div>
+                            )}
+                            {hierarchyReady && hierarchy.length === 0 && (
                                 <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600">
                                     No farm land data available. To assign geo-fenced fields to employees, ensure the F2C (Farm to Crop) app is installed and Geo Fencing Areas with types Farm, Cluster, and Field are created in the system.
                                 </div>
-                            ) : (
+                            )}
+                            {hierarchyReady && hierarchy.length > 0 && (
                                 <>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <Dropdown
                                             label="Farm"
-                                            options={hierarchy.map((f: Farm) => ({ value: f.name, label: f.area_name || f.name }))}
+                                            options={farmDropdownOptions(hierarchy)}
                                             value={selectedFarm}
                                             onChange={v => { setSelectedFarm(v); setSelectedCluster('') }}
                                             placeholder="Select farm first"
@@ -414,6 +452,16 @@ export default function CreateEmployeeModal({ isOpen, onClose, onSuccess }: Crea
                             </p>
                         </div>
                     </div>
+
+                    {submitError && (
+                        <div
+                            className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm text-red-900"
+                            role="alert"
+                        >
+                            <p className="font-medium text-red-800">Could not create employee</p>
+                            <p className="mt-1 whitespace-pre-wrap">{submitError}</p>
+                        </div>
+                    )}
 
                     <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t border-gray-100">
                         <button

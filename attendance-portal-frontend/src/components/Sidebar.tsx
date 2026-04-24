@@ -9,8 +9,9 @@ export default function Sidebar() {
     const location = useLocation()
     const { isManager, isHrAdmin, employeeName, employeeId, logout } = useAuth()
     const { isCollapsed, isMobileMenuOpen, closeMobileMenu } = useSidebar()
-    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', {
-        enabled: !!employeeId
+    const sidebarEmployeeSwrKey = employeeId ? `Employee:${employeeId}` : null
+    const { data: employee } = useFrappeGetDoc('Employee', employeeId || '', sidebarEmployeeSwrKey, {
+        revalidateOnFocus: false,
     })
     const [imageError, setImageError] = React.useState(false)
 

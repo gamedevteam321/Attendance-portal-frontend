@@ -19,8 +19,18 @@ export default function EmployeeDetailsPage() {
     const { data: employee, mutate: mutateEmployee } = useFrappeGetDoc('Employee', id!)
     const { call: getStats } = useFrappePostCall('attendance_portal.api.get_employee_stats')
     const { call: getBalances } = useFrappePostCall('attendance_portal.api.get_leave_balances')
-    const { data: officesData } = useFrappeGetCall('attendance_portal.api.get_office_locations', undefined, { revalidateOnFocus: false })
-    const { data: hierarchyData } = useFrappeGetCall('attendance_portal.api.get_geo_fencing_hierarchy', undefined, { revalidateOnFocus: false })
+    const { data: officesData } = useFrappeGetCall(
+        'attendance_portal.api.get_office_locations',
+        undefined,
+        undefined,
+        { revalidateOnFocus: false }
+    )
+    const { data: hierarchyData } = useFrappeGetCall(
+        'attendance_portal.api.get_geo_fencing_hierarchy',
+        undefined,
+        undefined,
+        { revalidateOnFocus: false }
+    )
 
     const officeDisplayNames = useMemo(() => {
         const raw = (officesData as any)?.message ?? officesData
