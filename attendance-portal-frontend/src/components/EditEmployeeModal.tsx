@@ -3,6 +3,7 @@ import { useFrappePostCall, useFrappeGetDocList, useFrappeGetDoc, useFrappeGetCa
 import toast from 'react-hot-toast'
 import AddDesignationModal from './AddDesignationModal'
 import Dropdown from './Dropdown'
+import { DESK_ROLE_OPTIONS, OPERATIONAL_ROLE_OPTIONS } from '../constants/employeePortalRoles'
 import {
     type Farm,
     type Cluster,
@@ -12,29 +13,11 @@ import {
     farmsWithClustersFlat,
     findFarmInTree,
     flattenFarmsDepthFirst,
+    toggleGeoId,
 } from '../utils/geoFencingHierarchy'
 import { getFrappeErrorMessage } from '../utils/frappeErrorMessage'
 
-/** Must match Role.name in ERPNext. */
-const OPERATIONAL_ROLE_OPTIONS = [
-    'Field Supervisor',
-    'Cluster Supervisor',
-    'Farm Manager',
-    'Project Manager',
-    'Administrator',
-    'Finance Head',
-    'CEO/Operational Head',
-    'Driver',
-] as const
-
-const DESK_ROLE_OPTIONS = ['Employee', 'Manager', 'HR Admin'] as const
-
 type GeoTab = 'farm' | 'cluster' | 'field'
-
-function toggleGeoId(ids: string[], id: string, on: boolean) {
-    if (on) return [...new Set([...ids, id])]
-    return ids.filter(x => x !== id)
-}
 
 interface EditEmployeeModalProps {
     isOpen: boolean

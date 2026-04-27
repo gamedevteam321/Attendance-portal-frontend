@@ -75,3 +75,8 @@ export function farmDropdownOptions(farms: Farm[], parentPath = ''): { value: st
     }
     return out
 }
+
+export function toggleGeoId(ids: string[], id: string, on: boolean): string[] {
+    if (on) return [...new Set([...ids, id])]
+    return ids.filter(x => x !== id)
+}
