@@ -4,10 +4,14 @@ export const OPERATIONAL_ROLE_OPTIONS = [
     'Cluster Supervisor',
     'Farm Manager',
     'Project Manager',
-    'Administrator',
-    'Finance Head',
-    'CEO/Operational Head',
     'Driver',
 ] as const
 
-export const DESK_ROLE_OPTIONS = ['Employee', 'Manager', 'HR Admin'] as const
+export const DESK_ROLE_OPTIONS = [
+    'Employee',
+    'Manager',
+    'HR Admin',
+    'Finance Head',
+    'CEO/Operational Head',
+    'Administrator',
+] as const
